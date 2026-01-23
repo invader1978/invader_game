@@ -6,12 +6,12 @@
 <title>Invader Stable v6 (Full Canvas)</title>
 <style>
   html,body{margin:0;padding:0;background:#000;overflow:hidden;touch-action:none;}
-  canvas{position:fixed;inset:0;display:block;}
-  #hud{
-    position:fixed;top:8px;left:8px;z-index:10;color:#fff;
+  canvas{position:fixed;inset:0;display:block;;touch-action:none;pointer-events:auto}
+  #hud{position:fixed;top:8px;left:8px;z-index:10;color:#fff;
     font:14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
     user-select:none;
-  }
+  
+    pointer-events:none;
   #msg{
     position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
     color:#fff;font:700 40px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
@@ -30,9 +30,6 @@
   LIFE <span id="life">❤️❤️❤️</span>
 </div>
 <div id="msg"></div>
-
-  </div>
-</div>
 
 <script>
 /* =========================
@@ -747,36 +744,27 @@ function loop(){
 ========================= */
 reset();
 loop();
-</script>
-</body>
-</html>
 
 /* =========================
-   入力（タップ/ドラッグ：画面タップで射撃 / 左右タップで移動）
-   - 端末幅による isMobile 判定に依存しない（タブレット/横画面でも確実に動作）
-   - pointer events を優先、フォールバックで touch events
+   入力（iOS Safari対応：タップ/ドラッグで移動＋射撃）
+   - iOS Safariは canvas に付けたイベントが不安定なことがあるため window にも付与
+   - HUDは pointer-events:none でタップを邪魔しない
 ========================= */
 let touchActive = false;
 
 function applySideByX(x){
   if(x < innerWidth * 0.5){
-    holdL = true;
-    holdR = false;
+    holdL = true; holdR = false;
   }else{
-    holdR = true;
-    holdL = false;
+    holdR = true; holdL = false;
   }
 }
 
 function startInputAt(x){
-  // GAME OVER中はタップでリスタート
-  if(over){
-    reset();
-    return;
-  }
+  if(over){ reset(); return; }
   touchActive = true;
 
-  // タップ開始で1発（連射はしない仕様）
+  // タップ開始で1発
   canShoot = true;
   shoot();
 
@@ -796,37 +784,36 @@ function endInput(){
   canShoot = true;
 }
 
-/* pointer events（推奨） */
-cv.addEventListener("pointerdown", (e)=>{
-  e.preventDefault();
-  cv.setPointerCapture?.(e.pointerId);
-  startInputAt(e.clientX);
-},{passive:false});
-
-cv.addEventListener("pointermove", (e)=>{
-  if(!touchActive) return;
-  moveInputAt(e.clientX);
-});
-
-cv.addEventListener("pointerup", ()=>{
-  endInput();
-});
-cv.addEventListener("pointercancel", ()=>{
-  endInput();
-});
-
-/* touch events（古いiOS向けフォールバック） */
-cv.addEventListener("touchstart", (e)=>{
+// iOS Safari：pointer より touch の方が安定することが多い
+function onTouchStart(e){
+  // 2本指スクロール等を防ぐ
   e.preventDefault();
   const t = e.touches[0];
+  if(!t) return;
   startInputAt(t.clientX);
-},{passive:false});
-
-cv.addEventListener("touchmove", (e)=>{
+}
+function onTouchMove(e){
+  e.preventDefault();
   const t = e.touches[0];
+  if(!t) return;
   moveInputAt(t.clientX);
-},{passive:false});
+}
+function onTouchEnd(e){
+  endInput();
+}
 
-cv.addEventListener("touchend", ()=> endInput());
-cv.addEventListener("touchcancel", ()=> endInput());
+// canvas と window の両方に付けて取りこぼしを防ぐ
+cv.addEventListener("touchstart", onTouchStart, {passive:false});
+cv.addEventListener("touchmove",  onTouchMove,  {passive:false});
+cv.addEventListener("touchend",   onTouchEnd);
+cv.addEventListener("touchcancel",onTouchEnd);
 
+window.addEventListener("touchstart", onTouchStart, {passive:false});
+window.addEventListener("touchmove",  onTouchMove,  {passive:false});
+window.addEventListener("touchend",   onTouchEnd);
+window.addEventListener("touchcancel",onTouchEnd);
+
+</script>
+</body>
+
+</html>
