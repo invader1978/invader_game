@@ -752,66 +752,81 @@ loop();
 </html>
 
 /* =========================
-   入力（モバイル：画面タップで射撃 / 左右タップで移動）
+   入力（タップ/ドラッグ：画面タップで射撃 / 左右タップで移動）
+   - 端末幅による isMobile 判定に依存しない（タブレット/横画面でも確実に動作）
+   - pointer events を優先、フォールバックで touch events
 ========================= */
 let touchActive = false;
-let touchSide = 0; // -1 left, 1 right
 
-function handleTouchStart(e){
+function applySideByX(x){
+  if(x < innerWidth * 0.5){
+    holdL = true;
+    holdR = false;
+  }else{
+    holdR = true;
+    holdL = false;
+  }
+}
+
+function startInputAt(x){
+  // GAME OVER中はタップでリスタート
   if(over){
     reset();
     return;
   }
-  if(!isMobile) return;
-  e.preventDefault();
+  touchActive = true;
 
-  const t = e.touches[0];
-  const x = t.clientX;
-
-  // 射撃
+  // タップ開始で1発（連射はしない仕様）
   canShoot = true;
   shoot();
 
-  // 移動方向
-  if(x < innerWidth * 0.5){
-    holdL = true;
-    holdR = false;
-    touchSide = -1;
-  }else{
-    holdR = true;
-    holdL = false;
-    touchSide = 1;
-  }
-  touchActive = true;
+  // 左右移動
+  applySideByX(x);
 }
 
-function handleTouchMove(e){
-  if(!isMobile || !touchActive) return;
-  const t = e.touches[0];
-  const x = t.clientX;
-
-  if(x < innerWidth * 0.5){
-    holdL = true;
-    holdR = false;
-    touchSide = -1;
-  }else{
-    holdR = true;
-    holdL = false;
-    touchSide = 1;
-  }
+function moveInputAt(x){
+  if(!touchActive) return;
+  applySideByX(x);
 }
 
-function handleTouchEnd(e){
-  if(!isMobile) return;
+function endInput(){
   holdL = false;
   holdR = false;
   touchActive = false;
-  touchSide = 0;
   canShoot = true;
 }
 
-// canvas 全体で受付
-cv.addEventListener("touchstart", handleTouchStart, {passive:false});
-cv.addEventListener("touchmove", handleTouchMove, {passive:false});
-cv.addEventListener("touchend", handleTouchEnd);
-cv.addEventListener("touchcancel", handleTouchEnd);
+/* pointer events（推奨） */
+cv.addEventListener("pointerdown", (e)=>{
+  e.preventDefault();
+  cv.setPointerCapture?.(e.pointerId);
+  startInputAt(e.clientX);
+},{passive:false});
+
+cv.addEventListener("pointermove", (e)=>{
+  if(!touchActive) return;
+  moveInputAt(e.clientX);
+});
+
+cv.addEventListener("pointerup", ()=>{
+  endInput();
+});
+cv.addEventListener("pointercancel", ()=>{
+  endInput();
+});
+
+/* touch events（古いiOS向けフォールバック） */
+cv.addEventListener("touchstart", (e)=>{
+  e.preventDefault();
+  const t = e.touches[0];
+  startInputAt(t.clientX);
+},{passive:false});
+
+cv.addEventListener("touchmove", (e)=>{
+  const t = e.touches[0];
+  moveInputAt(t.clientX);
+},{passive:false});
+
+cv.addEventListener("touchend", ()=> endInput());
+cv.addEventListener("touchcancel", ()=> endInput());
+
