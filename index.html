@@ -9,7 +9,7 @@
     margin:0;padding:0;background:#000;overflow:hidden;
     touch-action:none;
     overscroll-behavior:none;
-    -webkit-overflow-scrolling:auto; /* 追加：iOS系での挙動安定に寄与 */
+    -webkit-overflow-scrolling:auto; /* iOS系での挙動安定 */
     -webkit-text-size-adjust:100%;
   }
   canvas{position:fixed;inset:0;display:block;touch-action:none;pointer-events:auto}
@@ -300,7 +300,7 @@ function spawnEnemies(){
 }
 
 /* =========================
-   盾（★ここが修正ポイント）
+   盾（シールド再配置入り）
 ========================= */
 let shields = [];
 function buildShieldBits(){
@@ -309,25 +309,18 @@ function buildShieldBits(){
   return {bits,w,h};
 }
 
-/* ★追加：シールドの安全な配置計算（自機より上＆画面内に収める） */
 function computeShieldLayout(){
   const topMin = 40;            // 画面上の最低ライン
   const gapFromPlayer = 14;     // 自機との最低距離
   const defaultOffset = 80;     // 従来の -80
 
   const playerY = playerTopY();
-
-  // まず従来の位置を狙う
   let y = playerY - defaultOffset;
 
-  // 自機の下に入るのを絶対禁止
   const maxY = playerY - shieldH - gapFromPlayer;
   y = Math.min(y, maxY);
-
-  // 画面上に最低限入れる
   y = Math.max(y, topMin);
 
-  // もしスペースが本当に無い場合はギリギリに詰める（消えるよりマシ）
   if(maxY < topMin){
     y = Math.max(0, maxY);
   }
@@ -336,7 +329,6 @@ function computeShieldLayout(){
   return xs.map(v => ({ x: innerWidth * v - shieldW/2, y }));
 }
 
-/* ★差し替え：spawnShields は layout を使って生成 */
 function spawnShields(){
   shields = [];
   const proto = buildShieldBits();
@@ -348,10 +340,8 @@ function spawnShields(){
   }
 }
 
-/* ★追加：穴あき状態を維持したまま位置だけ更新 */
 function relayoutShields(){
   if(!shields.length){
-    // 念のため：空なら生成
     spawnShields();
     return;
   }
@@ -400,16 +390,45 @@ function shoot(){
   canShoot=false;
   bullets.push({x:px-BW/2,y:playerTopY(),v:-10});
 }
+
+/* ★変更：Waveで「頻度UP」「同時弾数UP」「バースト発射」 */
+function enemyProfile(){
+  // 発射間隔：Waveが上がるほど短く（=頻度増）
+  const fireInterval = Math.max(18, Math.floor(140 - (wave-1) * 8));
+
+  // 同時に存在できる敵弾の上限：Waveごとに増える
+  const maxBullets = Math.min(12, 2 + Math.floor((wave-1) / 4));
+
+  // 1回の発射で追加する弾数（バースト）
+  const burst = Math.min(3, 1 + Math.floor((wave-1) / 6));
+
+  return { fireInterval, maxBullets, burst };
+}
+
 function enemyShoot(){
   if(paused) return;
   if(ready||clearing||over) return;
+
+  const prof = enemyProfile();
+  if(ebullets.length >= prof.maxBullets) return;
+
   const alive=[];
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++) if(aliveGrid[r][c]) alive.push([r,c]);
   if(!alive.length) return;
+
   const [r,c]=alive[(Math.random()*alive.length)|0];
   const {stepX,stepY}=formationMetrics();
   const ex=fx+c*stepX, ey=fy+r*stepY;
-  ebullets.push({x:ex+enemyW/2-BW/2,y:ey+enemyH,v:isMobile?5:7});
+
+  // 弾速もWaveで少しUP（上がりすぎ防止）
+  const baseV = (isMobile ? 5 : 7);
+  const v = baseV + Math.min(4, (wave-1) * 0.2);
+
+  const shots = Math.min(prof.burst, prof.maxBullets - ebullets.length);
+  for(let k=0;k<shots;k++){
+    const spread = (k - (shots-1)/2) * (BW + 2); // -?,0,+?
+    ebullets.push({x:ex+enemyW/2-BW/2 + spread, y:ey+enemyH, v});
+  }
 }
 
 /* =========================
@@ -452,11 +471,6 @@ function reset(){
 /* =========================
    ロジック
 ========================= */
-function enemyProfile(){
-  const fireInterval=Math.max(40,Math.floor(140-(wave-1)*10));
-  return {fireInterval};
-}
-
 function updateLogic(dt){
   if(paused) return;
 
@@ -479,9 +493,13 @@ function updateLogic(dt){
   const remaining=Math.max(1,countAlive());
   const initialCount=enemyInitialCount||remaining;
   const ratio=remaining/initialCount;
-  const baseInterval=260,minInterval=80;
-  let moveInterval=baseInterval*ratio+minInterval*(1-ratio);
-  moveInterval=Math.max(minInterval,moveInterval)/(1+(wave-1)*0.06);
+
+  // ★変更：Waveで移動が「少しずつ」加速（速くなりすぎ防止あり）
+  const baseInterval=260, minInterval=70;
+  let moveInterval = baseInterval*ratio + minInterval*(1-ratio);
+  const waveSpeedMul = 1 / (1 + (wave-1) * 0.04);
+  moveInterval = Math.max(45, moveInterval * waveSpeedMul);
+
   const stepMoveX=0.55*U*(1+(wave-1)*0.02);
   const stepDown=0.60*U;
   const wallPauseMs=140;
@@ -634,7 +652,7 @@ addEventListener("keyup",(e)=>{
 });
 
 /* =========================
-   モバイル：アナログスティック＋SHOT（iOS26安定：touch専用）
+   モバイル：アナログスティック＋SHOT（touch専用）
 ========================= */
 const controls=document.getElementById("controls");
 const stickBase=document.getElementById("stickBase");
@@ -743,7 +761,6 @@ shootBtn.addEventListener("touchend", endShootTouch, {passive:false});
 shootBtn.addEventListener("touchcancel", endShootTouch, {passive:false});
 
 function updateControlsVisibility(){
-  // 画面幅ではなく「タッチ端末かどうか」で表示を決める（iPhone横画面でも確実に出す）
   controls.style.display = isMobile ? 'block' : 'none';
   updateStickGeometry();
   setKnobPos(stick.baseCx, stick.baseCy);
@@ -751,7 +768,7 @@ function updateControlsVisibility(){
 updateControlsVisibility();
 
 /* =========================
-   resize（★ここも修正ポイント：毎回relayoutShields）
+   resize（毎回relayoutShields）
 ========================= */
 let resizeQueued=false;
 addEventListener("resize",()=>{
@@ -760,9 +777,8 @@ addEventListener("resize",()=>{
   requestAnimationFrame(()=>{
     resizeQueued=false;
     resizeCanvas();
-    const oldU=U, oldIsMobile=isMobile, oldCols=cols, oldRows=rows;
+    const oldIsMobile=isMobile, oldCols=cols, oldRows=rows;
     U=calcU();
-    // iOS横画面でもタッチ端末ならモバイル扱い
     isMobile = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
     recalcSizes();
 
@@ -771,7 +787,6 @@ addEventListener("resize",()=>{
 
     if(bpChanged){ reset(); return; }
 
-    // ★重要：Uが変わらなくてもシールド位置を毎回更新（穴あき維持）
     relayoutShields();
 
     const {totalW,baseY}=formationMetrics();
