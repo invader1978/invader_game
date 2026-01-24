@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport"
   content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<title>Invader Stable v8.2 (Player Shoot Cooldown)</title>
+<title>Invader Stable v8.3 (Input & Mobile & Perf)</title>
 <style>
   html,body{
     margin:0;padding:0;background:#000;overflow:hidden;
@@ -115,6 +115,11 @@
   "use strict";
 
   /* =========================================================
+     v8.3
+     - ③入力処理整理：playerCanShoot廃止（クールダウン一本化）
+     - ④パフォーマンス：星/シールド削りの割当削減、描画スケールキャッシュ
+     - ⑥モバイル操作：スティック/ボタンを画面サイズに追従
+
      v8.2
      - v8.1 の改善点（①②③-8④）を維持
      - ★追加：自機の発射クールダウン（連射抑制）
@@ -195,6 +200,7 @@
   const stickBase = document.getElementById("stickBase");
   const stickKnob = document.getElementById("stickKnob");
   const shootBtn = document.getElementById("shootBtn");
+  const shootLabel = document.getElementById("shootLabel");
 
   const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
   const aabb = (ax,ay,aw,ah,bx,by,bw,bh) =>
@@ -285,8 +291,6 @@
 
       this.holdL = false;
       this.holdR = false;
-      this.playerCanShoot = true;
-
       this.playerBottomPx = 70;
       this.px = innerWidth/2;
 
@@ -366,13 +370,21 @@
       this.fmDirty = true;
     }
 
-    resetStars(){
-      this.stars = [...Array(120)].map(() => ({
-        x:Math.random()*innerWidth,
-        y:Math.random()*innerHeight,
-        s:0.6+Math.random()*1.2
-      }));
+resetStars(){
+  const N = 120;
+  if(this.stars.length !== N){
+    this.stars.length = 0;
+    for(let i=0;i<N;i++){
+      this.stars.push({x:0,y:0,s:1});
     }
+  }
+  for(let i=0;i<N;i++){
+    const st = this.stars[i];
+    st.x = Math.random()*innerWidth;
+    st.y = Math.random()*innerHeight;
+    st.s = 0.6 + Math.random()*1.2;
+  }
+}
 
     _computeFormationMetrics(){
       const minGapX = 0.90*this.U, minGapY = 1.10*this.U;
@@ -448,6 +460,7 @@
       s.aliveIndex = new Int16Array(total);
       s.aliveIndex.fill(-1);
 
+      const enemyScale = Math.max(1, Math.round(s.enemyW/7));
       for(let r=0;r<s.rows;r++){
         for(let c=0;c<s.cols;c++){
           if(s.hpGrid[r][c] > 0){
@@ -609,15 +622,16 @@
         const rx = clamp(Math.floor(((bx+bw/2)-sh.x)/s.U), 0, sh.w-1);
         const ry = clamp(Math.floor(((by+bh/2)-sh.y)/s.U), 0, sh.h-1);
 
-        const cand=[];
+        let pickR = -1, pickC = -1, seen = 0;
         for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
-          const cx=rx+dx, cy=ry+dy;
-          if(cy>=0&&cy<sh.h&&cx>=0&&cx<sh.w&&sh.bits[cy][cx]) cand.push([cy,cx]);
+          const cx = rx + dx, cy = ry + dy;
+          if(cy>=0 && cy<sh.h && cx>=0 && cx<sh.w && sh.bits[cy][cx]){
+            seen++;
+            // reservoir sampling
+            if((Math.random()*seen) < 1){ pickR = cy; pickC = cx; }
+          }
         }
-        if(cand.length){
-          const [cy,cx]=cand[(Math.random()*cand.length)|0];
-          sh.bits[cy][cx]=false;
-        }
+        if(pickR >= 0) sh.bits[pickR][pickC] = false;
         return true;
       };
 
@@ -1022,7 +1036,6 @@
         msgEl.textContent = "PAUSED";
         s.holdL = false; s.holdR = false;
         Input.stickReset();
-        s.playerCanShoot = true;
       }else{
         if(this._msgBeforePause && this._msgBeforePause !== "PAUSED") msgEl.innerHTML = this._msgBeforePause;
         else msgEl.textContent = "";
@@ -1054,8 +1067,6 @@
       s.paused = false;
       pauseBtn.textContent = "PAUSE";
       this._msgBeforePause = "";
-
-      s.playerCanShoot = true;
       s.holdL = false; s.holdR = false;
 
       scoreEl.textContent = "0";
@@ -1228,6 +1239,7 @@
         }
       }
 
+      const enemyScale = Math.max(1, Math.round(s.enemyW/7));
       for(let r=0;r<s.rows;r++){
         for(let c=0;c<s.cols;c++){
           if(s.hpGrid[r][c] <= 0) continue;
@@ -1236,8 +1248,7 @@
           const color = s.colors.row[r % s.colors.row.length];
           const x = s.fx + c*fm.stepX;
           const y = s.fy + r*fm.stepY;
-          const scale = Math.max(1, Math.round(s.enemyW/7));
-          drawBitmap(bmp, x, y, scale, color);
+          drawBitmap(bmp, x, y, enemyScale, color);
 
           if(s.hpGrid[r][c] >= 2){
             ctx.fillStyle="rgba(255,255,255,.65)";
@@ -1271,18 +1282,51 @@
   let projectiles, collisions, logic, renderer;
 
   const Input = {
-    stick: { baseCx:0, baseCy:0, radius:52, dx:0 },
+    stick: { baseCx:0, baseCy:0, radius:52, dx:0, knobW:74, knobH:74 },
     stickTouchActive:false,
 
+    applyMobileControlSizes(){
+      if(!state.isMobile) return;
+      const m = Math.min(innerWidth, innerHeight);
+      const clampInt = (v,a,b)=>Math.max(a, Math.min(b, v|0));
+
+      const margin = clampInt(Math.round(m*0.035), 16, 28);
+      const base = clampInt(Math.round(m*0.22), 110, 170);
+      const knob = clampInt(Math.round(base*0.52), 60, 92);
+      const shoot = clampInt(Math.round(m*0.20), 100, 150);
+
+      stickBase.style.width = stickBase.style.height = base + "px";
+      stickKnob.style.width = stickKnob.style.height = knob + "px";
+      shootBtn.style.width = shootBtn.style.height = shoot + "px";
+
+      stickBase.style.left = margin + "px";
+      stickBase.style.bottom = margin + "px";
+      stickKnob.style.left = margin + "px";
+      stickKnob.style.bottom = margin + "px";
+
+      shootBtn.style.right = margin + "px";
+      shootBtn.style.bottom = (margin + 6) + "px";
+
+      // label position
+      shootLabel.style.right = margin + "px";
+      shootLabel.style.bottom = (margin + shoot + 18) + "px";
+    },
+
     updateStickGeometry(){
-      const r = stickBase.getBoundingClientRect();
-      this.stick.baseCx = r.left + r.width/2;
-      this.stick.baseCy = r.top  + r.height/2;
+      const br = stickBase.getBoundingClientRect();
+      const kr = stickKnob.getBoundingClientRect();
+      this.stick.baseCx = br.left + br.width/2;
+      this.stick.baseCy = br.top  + br.height/2;
+      this.stick.knobW = kr.width || 74;
+      this.stick.knobH = kr.height || 74;
+      // knob center can move inside base
+      const radius = (br.width/2) - (this.stick.knobW/2);
+      this.stick.radius = Math.max(18, radius);
     },
 
     setKnobPos(x,y){
-      const w = stickKnob.offsetWidth || 74;
-      const h = stickKnob.offsetHeight || 74;
+      const w = this.stick.knobW || 74;
+      const h = this.stick.knobH || 74;
       stickKnob.style.left = (x - w/2) + "px";
       stickKnob.style.top  = (y - h/2) + "px";
     },
@@ -1305,6 +1349,7 @@
       this.stick.dx = 0;
       state.holdL = false;
       state.holdR = false;
+      this.applyMobileControlSizes();
       this.updateStickGeometry();
       this.setKnobPos(this.stick.baseCx, this.stick.baseCy);
     },
@@ -1322,6 +1367,7 @@
 
     updateControlsVisibility(){
       controls.style.display = state.isMobile ? "block" : "none";
+      this.applyMobileControlSizes();
       this.updateStickGeometry();
       this.setKnobPos(this.stick.baseCx, this.stick.baseCy);
     }
@@ -1355,8 +1401,7 @@
     if(e.code==="ArrowRight") state.holdR=true;
 
     // キーボード側もクールダウンで制限されます（shootPlayerOnce 内）
-    if(e.code==="KeyA" && state.playerCanShoot){
-      state.playerCanShoot = false;
+    if(e.code==="KeyA"){
       projectiles.shootPlayerOnce();
     }
   });
@@ -1365,7 +1410,6 @@
     if(state.paused) return;
     if(e.code==="ArrowLeft") state.holdL=false;
     if(e.code==="ArrowRight") state.holdR=false;
-    if(e.code==="KeyA") state.playerCanShoot = true;
   });
 
   ["touchstart","touchmove","touchend"].forEach(t=>{
