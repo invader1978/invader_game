@@ -197,7 +197,11 @@
   const IS_IOS = /iP(hone|ad|od)/.test(UA);
 
   const cv = document.getElementById("cv");
-  const ctx = cv.getContext("2d", { alpha:false }) || cv.getContext("2d");
+  const ctx = cv.getContext("2d", { alpha:false, desynchronized:true })
+           || cv.getContext("2d", { alpha:false })
+           || cv.getContext("2d");
+
+  let DPR = 1;
 
   // iOSジェスチャ抑制：canvas 限定
   if (IS_IOS) {
@@ -248,7 +252,18 @@
   const aabb = (ax,ay,aw,ah,bx,by,bw,bh) =>
     !(ax+aw<bx || ax>bx+bw || ay+ah<by || ay>by+bh);
 
-  function resizeCanvas(){ cv.width = innerWidth; cv.height = innerHeight; }
+  function resizeCanvas(){
+      // HiDPI: render at devicePixelRatio (capped for performance)
+      DPR = Math.min(2, window.devicePixelRatio || 1);
+      const w = innerWidth, h = innerHeight;
+      cv.style.width = w + "px";
+      cv.style.height = h + "px";
+      cv.width  = Math.max(1, Math.round(w * DPR));
+      cv.height = Math.max(1, Math.round(h * DPR));
+      // Draw in CSS pixels
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+    }
   function calcU(){ if (innerWidth>=1200) return 7; if (innerWidth>=800) return 6; return 4; }
   function isCoarse(){
     return (window.matchMedia && window.matchMedia("(pointer: coarse)").matches)
@@ -272,14 +287,17 @@
   ];
 
   function drawBitmap(lines, x, y, scale, color){
-    ctx.fillStyle = color;
-    for(let r=0;r<lines.length;r++){
-      const row = lines[r];
-      for(let c=0;c<row.length;c++){
-        if(row[c]==="1") ctx.fillRect(x+c*scale, y+r*scale, scale, scale);
+      ctx.fillStyle = color;
+      const h = lines.length;
+      for(let r=0;r<h;r++){
+        const row = lines[r];
+        const y0 = y + r*scale;
+        const w = row.length;
+        for(let c=0;c<w;c++){
+          if(row[c]==="1") ctx.fillRect(x + c*scale, y0, scale, scale);
+        }
       }
     }
-  }
 
   class Pool {
     constructor(createFn, resetFn, initial=64){
@@ -1271,9 +1289,10 @@ resetStars(){
     render(){
       const s = this.s;
       const fm = s.getFM();
+      const W = innerWidth, H = innerHeight;
 
       ctx.fillStyle="#000";
-      ctx.fillRect(0,0,innerWidth,innerHeight);
+      ctx.fillRect(0,0,W,H);
 
       ctx.fillStyle="#fff";
       for(const st of s.stars) ctx.fillRect(st.x,st.y,2,2);
@@ -1319,7 +1338,7 @@ resetStars(){
 
       if(s.paused){
         ctx.fillStyle="rgba(0,0,0,.25)";
-        ctx.fillRect(0,0,innerWidth,innerHeight);
+        ctx.fillRect(0,0,W,H);
       }
     }
   }
