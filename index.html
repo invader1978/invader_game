@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport"
   content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<title>Invader Stable v8.5 (Tap Restart Stable)</title>
+<title>Invader Stable v8.6 (Tap Restart Stable+)</title>
 <style>
   html,body{
     margin:0;padding:0;background:#000;overflow:hidden;
@@ -115,9 +115,6 @@
   "use strict";
 
   /* =========================================================
-     v8.5
-     - ★GAME OVERタップ再開の安定化（①二重発火防止 ②操作UI無効化 ③controls領域除外）
-
      v8.3
      - ③入力処理整理：playerCanShoot廃止（クールダウン一本化）
      - ④パフォーマンス：星/シールド削りの割当削減、描画スケールキャッシュ
@@ -324,6 +321,8 @@
 
       this.shields = [];
       this.shieldBoxes = [];
+
+      this.shieldDirty = true; // offscreen shield cache needs rebuild
 
       this.shieldContactTick = 0;
       this.shieldContactEvery = CONFIG.shield.contactEvery;
@@ -583,6 +582,7 @@ resetStars(){
         s.shields.push({x,y,bits,w:proto.w,h:proto.h});
       }
       this.rebuildShieldBoxes();
+      s.shieldDirty = true;
     }
 
     relayoutShields(){
@@ -594,6 +594,7 @@ resetStars(){
         s.shields[i].y = layout[i].y;
       }
       this.rebuildShieldBoxes();
+      s.shieldDirty = true;
     }
 
     rebuildShieldBoxes(){
@@ -635,6 +636,7 @@ resetStars(){
           }
         }
         if(pickR >= 0) sh.bits[pickR][pickC] = false;
+        if(pickR >= 0) s.shieldDirty = true;
         return true;
       };
 
@@ -650,6 +652,7 @@ resetStars(){
     damageShieldRandom(shield, hits){
       hits = Math.max(0, hits|0);
       if(!hits) return;
+      this.s.shieldDirty = true;
       let attempts = hits * 10;
       while(hits > 0 && attempts-- > 0){
         const r = (Math.random() * shield.h) | 0;
@@ -659,6 +662,8 @@ resetStars(){
           hits--;
         }
       }
+
+      s.shieldDirty = true;
     }
   }
 
@@ -796,15 +801,9 @@ resetStars(){
       s.over = true;
       s.paused = false;
       pauseBtn.textContent = "PAUSE";
-      msgEl.innerHTML = "GAME OVER<br>Tap or Enter";
-      // allow tapping/clicking the overlay to restart
-      msgEl.style.pointerEvents = "auto";
-      msgEl.style.cursor = "pointer";
-      setGameOverControlLock(true);
+      msgEl.textContent = "GAME OVER\nTap or Enter";
       s.holdL = false;
       s.holdR = false;
-      // stop mobile stick drift
-      if (typeof Input !== "undefined") Input.stickReset();
     }
 
     nextWave(){
@@ -1041,12 +1040,12 @@ resetStars(){
       s.paused = !!next;
       pauseBtn.textContent = s.paused ? "RESUME" : "PAUSE";
       if(s.paused){
-        this._msgBeforePause = msgEl.innerHTML;
+        this._msgBeforePause = msgEl.textContent;
         msgEl.textContent = "PAUSED";
         s.holdL = false; s.holdR = false;
         Input.stickReset();
       }else{
-        if(this._msgBeforePause && this._msgBeforePause !== "PAUSED") msgEl.innerHTML = this._msgBeforePause;
+        if(this._msgBeforePause && this._msgBeforePause !== "PAUSED") msgEl.textContent = this._msgBeforePause;
         else msgEl.textContent = "";
         this._msgBeforePause = "";
       }
@@ -1060,10 +1059,6 @@ resetStars(){
       s.shieldContactTick = 0;
 
       msgEl.textContent = "";
-      // message overlay should not block gameplay input
-      msgEl.style.pointerEvents = "none";
-      msgEl.style.cursor = "";
-      setGameOverControlLock(false);
       s.score = 0;
       s.wave = 1;
       s.life = 3;
@@ -1092,6 +1087,8 @@ resetStars(){
       this.enemies.spawnEnemies();
       this.shields.spawnShields();
       this.col.showReady();
+      // extra safety: clear any lingering mobile input on restart
+      if (typeof Input !== "undefined") Input.stickReset();
     }
 
     update(dt){
@@ -1228,10 +1225,61 @@ resetStars(){
   }
 
   class Renderer {
-    constructor(state, projectiles){
-      this.s = state;
-      this.pj = projectiles;
+  constructor(state, projectiles){
+    this.s = state;
+    this.pj = projectiles;
+
+    // Offscreen caches (v8.6): shields + bitmap sprites
+    this._bmpCache = new Map();
+    this._shieldLayer = document.createElement("canvas");
+    this._shieldCtx = this._shieldLayer.getContext("2d");
+    this._shieldColor = "";
+  }
+
+  _getBitmapCanvas(lines, scale, color){
+    const key = color + "@" + scale + "@" + lines.join("/");
+    const hit = this._bmpCache.get(key);
+    if(hit) return hit;
+
+    const w = lines[0].length * scale;
+    const h = lines.length * scale;
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    const cctx = c.getContext("2d");
+    cctx.fillStyle = color;
+    for(let r=0;r<lines.length;r++){
+      const row = lines[r];
+      for(let col=0;col<row.length;col++){
+        if(row[col] === "1") cctx.fillRect(col*scale, r*scale, scale, scale);
+      }
     }
+    this._bmpCache.set(key, c);
+    return c;
+  }
+
+  _ensureShieldLayer(){
+    if(this._shieldLayer.width !== innerWidth || this._shieldLayer.height !== innerHeight){
+      this._shieldLayer.width = innerWidth;
+      this._shieldLayer.height = innerHeight;
+      this.s.shieldDirty = true;
+    }
+  }
+
+  _rebuildShieldLayer(color){
+    const s = this.s;
+    this._ensureShieldLayer();
+    const g = this._shieldCtx;
+    g.clearRect(0,0,this._shieldLayer.width,this._shieldLayer.height);
+    g.fillStyle = color;
+    for(const sh of s.shields){
+      for(let r=0;r<sh.h;r++){
+        for(let c=0;c<sh.w;c++){
+          if(sh.bits[r][c]) g.fillRect(sh.x + c*s.U, sh.y + r*s.U, s.U, s.U);
+        }
+      }
+    }
+    s.shieldDirty = false;
+  }
     render(){
       const s = this.s;
       const fm = s.getFM();
@@ -1242,15 +1290,15 @@ resetStars(){
       ctx.fillStyle="#fff";
       for(const st of s.stars) ctx.fillRect(st.x,st.y,2,2);
 
-      const sc = s.colors.shield();
-      for(const sh of s.shields){
-        ctx.fillStyle = sc;
-        for(let r=0;r<sh.h;r++){
-          for(let c=0;c<sh.w;c++){
-            if(sh.bits[r][c]) ctx.fillRect(sh.x + c*s.U, sh.y + r*s.U, s.U, s.U);
-          }
-        }
-      }
+// Shields (offscreen cache, rebuild only when damaged/respawned)
+const sc = s.colors.shield();
+this._ensureShieldLayer();
+if (this._shieldColor !== sc){
+  this._shieldColor = sc;
+  s.shieldDirty = true;
+}
+if (s.shieldDirty) this._rebuildShieldLayer(sc);
+ctx.drawImage(this._shieldLayer, 0, 0);
 
       const enemyScale = Math.max(1, Math.round(s.enemyW/7));
       for(let r=0;r<s.rows;r++){
@@ -1261,7 +1309,8 @@ resetStars(){
           const color = s.colors.row[r % s.colors.row.length];
           const x = s.fx + c*fm.stepX;
           const y = s.fy + r*fm.stepY;
-          drawBitmap(bmp, x, y, enemyScale, color);
+          const img = this._getBitmapCanvas(bmp, enemyScale, color);
+          ctx.drawImage(img, x, y);
 
           if(s.hpGrid[r][c] >= 2){
             ctx.fillStyle="rgba(255,255,255,.65)";
@@ -1270,7 +1319,10 @@ resetStars(){
         }
       }
 
-      drawBitmap(SHIP, s.px - s.shipW/2, s.playerTopY(), s.U, s.colors.player());
+      {
+        const img = this._getBitmapCanvas(SHIP, s.U, s.colors.player());
+        ctx.drawImage(img, s.px - s.shipW/2, s.playerTopY());
+      }
 
       ctx.fillStyle="cyan";
       for(const b of this.pj.playerBullets.active) ctx.fillRect(b.x,b.y,s.BW,s.BH);
@@ -1397,40 +1449,6 @@ resetStars(){
     e.preventDefault();
     logic.togglePause();
   }, {passive:false});
-
-  // ===== GAME OVER tap stability helpers (v8.5) =====
-  const setGameOverControlLock = (on) => {
-    // During GAME OVER, disable mobile controls so taps reach the canvas/overlay.
-    const pe = on ? "none" : "auto";
-    stickBase.style.pointerEvents = pe;
-    stickKnob.style.pointerEvents = pe;
-    shootBtn.style.pointerEvents  = pe;
-  };
-
-  // ===== GAME OVER: tap/click anywhere to restart =====
-  const restartFromTap = (e) => {
-    if (!state.over) return;
-
-    const t = e.target;
-    // don't interfere with UI areas/buttons
-    if (t === pauseBtn) return;
-    if (controls.contains(t)) return;
-
-    logic.reset();
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  // Canvas click/tap
-  cv.addEventListener("pointerdown", restartFromTap, { passive:false });
-  // Overlay click/tap (when GAME OVER)
-  msgEl.addEventListener("pointerdown", restartFromTap, { passive:false });
-
-  // iOS fallback ONLY when Pointer Events are unavailable (avoid double-fire)
-  if (!("PointerEvent" in window)) {
-    cv.addEventListener("touchstart", restartFromTap, { passive:false });
-    msgEl.addEventListener("touchstart", restartFromTap, { passive:false });
-  }
 
   addEventListener("keydown",(e)=>{
     if(e.key==="p"||e.key==="P"||e.key==="Escape"){
