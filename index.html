@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport"
   content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<title>Invader Stable v8.6 (Tap Restart Stable+)</title>
+<title>Invader Stable v8.3 (Input & Mobile & Perf)</title>
 <style>
   html,body{
     margin:0;padding:0;background:#000;overflow:hidden;
@@ -37,6 +37,22 @@
     text-shadow:0 2px 0 rgba(0,0,0,.5);
     z-index:40;pointer-events:none;text-align:center;white-space:pre-line;
   }
+
+  #restartHint{
+    display:inline-block;
+    margin-top:14px;
+    padding:10px 14px;
+    font-size:24px;
+    font-weight:700;
+    letter-spacing:0.02em;
+    opacity:0.9;
+    cursor:pointer;
+    pointer-events:auto;
+    text-decoration:underline;
+    text-underline-offset:4px;
+    touch-action:manipulation;
+  }
+  #restartHint:active{ opacity:0.6; }
 
   /* ===== Mobile controls ===== */
   .controls{position:fixed;inset:0;z-index:70;pointer-events:none}
@@ -196,6 +212,32 @@
   const msgEl   = document.getElementById("msg");
   const pauseBtn = document.getElementById("pauseBtn");
 
+  // --- Restart by tapping only the "Tap or Enter" hint (GAME OVER) ---
+  function bindRestartHint(){
+    const hint = document.getElementById("restartHint");
+    if(!hint) return;
+
+    const handler = (e) => {
+      if(!state.over || state.paused) return;
+      logic.reset();
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    // Replace handlers (no stacking)
+    hint.onpointerup = null;
+    hint.onclick = null;
+    hint.ontouchend = null;
+
+    if("PointerEvent" in window){
+      hint.onpointerup = handler;
+      hint.onclick = handler; // desktop fallback
+    }else{
+      hint.ontouchend = handler;
+      hint.onclick = handler;
+    }
+  }
+
   const controls = document.getElementById("controls");
   const stickBase = document.getElementById("stickBase");
   const stickKnob = document.getElementById("stickKnob");
@@ -321,8 +363,6 @@
 
       this.shields = [];
       this.shieldBoxes = [];
-
-      this.shieldDirty = true; // offscreen shield cache needs rebuild
 
       this.shieldContactTick = 0;
       this.shieldContactEvery = CONFIG.shield.contactEvery;
@@ -582,7 +622,6 @@ resetStars(){
         s.shields.push({x,y,bits,w:proto.w,h:proto.h});
       }
       this.rebuildShieldBoxes();
-      s.shieldDirty = true;
     }
 
     relayoutShields(){
@@ -594,7 +633,6 @@ resetStars(){
         s.shields[i].y = layout[i].y;
       }
       this.rebuildShieldBoxes();
-      s.shieldDirty = true;
     }
 
     rebuildShieldBoxes(){
@@ -636,7 +674,6 @@ resetStars(){
           }
         }
         if(pickR >= 0) sh.bits[pickR][pickC] = false;
-        if(pickR >= 0) s.shieldDirty = true;
         return true;
       };
 
@@ -652,7 +689,6 @@ resetStars(){
     damageShieldRandom(shield, hits){
       hits = Math.max(0, hits|0);
       if(!hits) return;
-      this.s.shieldDirty = true;
       let attempts = hits * 10;
       while(hits > 0 && attempts-- > 0){
         const r = (Math.random() * shield.h) | 0;
@@ -662,8 +698,6 @@ resetStars(){
           hits--;
         }
       }
-
-      s.shieldDirty = true;
     }
   }
 
@@ -801,7 +835,9 @@ resetStars(){
       s.over = true;
       s.paused = false;
       pauseBtn.textContent = "PAUSE";
-      msgEl.textContent = "GAME OVER\nTap or Enter";
+      msgEl.innerHTML = 'GAME OVER<br><span id="restartHint">TAP or ENTER</span>';
+      msgEl.style.pointerEvents = "auto";
+      bindRestartHint();
       s.holdL = false;
       s.holdR = false;
     }
@@ -813,6 +849,7 @@ resetStars(){
       setTimeout(() => {
         if(s.paused) return;
         msgEl.textContent = "";
+      msgEl.style.pointerEvents = "none";
         s.wave++;
         waveEl.textContent = s.wave;
         s.clearing = false;
@@ -1040,13 +1077,17 @@ resetStars(){
       s.paused = !!next;
       pauseBtn.textContent = s.paused ? "RESUME" : "PAUSE";
       if(s.paused){
-        this._msgBeforePause = msgEl.textContent;
+        this._msgBeforePause = msgEl.innerHTML;
         msgEl.textContent = "PAUSED";
+        msgEl.style.pointerEvents = "none";
         s.holdL = false; s.holdR = false;
         Input.stickReset();
       }else{
-        if(this._msgBeforePause && this._msgBeforePause !== "PAUSED") msgEl.textContent = this._msgBeforePause;
+        if(this._msgBeforePause && this._msgBeforePause !== "PAUSED") msgEl.innerHTML = this._msgBeforePause;
         else msgEl.textContent = "";
+        // Re-enable hint tapping only if we restored GAME OVER message
+        if(state.over){ msgEl.style.pointerEvents = "auto"; bindRestartHint(); }
+        else { msgEl.style.pointerEvents = "none"; }
         this._msgBeforePause = "";
       }
     }
@@ -1087,8 +1128,6 @@ resetStars(){
       this.enemies.spawnEnemies();
       this.shields.spawnShields();
       this.col.showReady();
-      // extra safety: clear any lingering mobile input on restart
-      if (typeof Input !== "undefined") Input.stickReset();
     }
 
     update(dt){
@@ -1225,61 +1264,10 @@ resetStars(){
   }
 
   class Renderer {
-  constructor(state, projectiles){
-    this.s = state;
-    this.pj = projectiles;
-
-    // Offscreen caches (v8.6): shields + bitmap sprites
-    this._bmpCache = new Map();
-    this._shieldLayer = document.createElement("canvas");
-    this._shieldCtx = this._shieldLayer.getContext("2d");
-    this._shieldColor = "";
-  }
-
-  _getBitmapCanvas(lines, scale, color){
-    const key = color + "@" + scale + "@" + lines.join("/");
-    const hit = this._bmpCache.get(key);
-    if(hit) return hit;
-
-    const w = lines[0].length * scale;
-    const h = lines.length * scale;
-    const c = document.createElement("canvas");
-    c.width = w; c.height = h;
-    const cctx = c.getContext("2d");
-    cctx.fillStyle = color;
-    for(let r=0;r<lines.length;r++){
-      const row = lines[r];
-      for(let col=0;col<row.length;col++){
-        if(row[col] === "1") cctx.fillRect(col*scale, r*scale, scale, scale);
-      }
+    constructor(state, projectiles){
+      this.s = state;
+      this.pj = projectiles;
     }
-    this._bmpCache.set(key, c);
-    return c;
-  }
-
-  _ensureShieldLayer(){
-    if(this._shieldLayer.width !== innerWidth || this._shieldLayer.height !== innerHeight){
-      this._shieldLayer.width = innerWidth;
-      this._shieldLayer.height = innerHeight;
-      this.s.shieldDirty = true;
-    }
-  }
-
-  _rebuildShieldLayer(color){
-    const s = this.s;
-    this._ensureShieldLayer();
-    const g = this._shieldCtx;
-    g.clearRect(0,0,this._shieldLayer.width,this._shieldLayer.height);
-    g.fillStyle = color;
-    for(const sh of s.shields){
-      for(let r=0;r<sh.h;r++){
-        for(let c=0;c<sh.w;c++){
-          if(sh.bits[r][c]) g.fillRect(sh.x + c*s.U, sh.y + r*s.U, s.U, s.U);
-        }
-      }
-    }
-    s.shieldDirty = false;
-  }
     render(){
       const s = this.s;
       const fm = s.getFM();
@@ -1290,15 +1278,15 @@ resetStars(){
       ctx.fillStyle="#fff";
       for(const st of s.stars) ctx.fillRect(st.x,st.y,2,2);
 
-// Shields (offscreen cache, rebuild only when damaged/respawned)
-const sc = s.colors.shield();
-this._ensureShieldLayer();
-if (this._shieldColor !== sc){
-  this._shieldColor = sc;
-  s.shieldDirty = true;
-}
-if (s.shieldDirty) this._rebuildShieldLayer(sc);
-ctx.drawImage(this._shieldLayer, 0, 0);
+      const sc = s.colors.shield();
+      for(const sh of s.shields){
+        ctx.fillStyle = sc;
+        for(let r=0;r<sh.h;r++){
+          for(let c=0;c<sh.w;c++){
+            if(sh.bits[r][c]) ctx.fillRect(sh.x + c*s.U, sh.y + r*s.U, s.U, s.U);
+          }
+        }
+      }
 
       const enemyScale = Math.max(1, Math.round(s.enemyW/7));
       for(let r=0;r<s.rows;r++){
@@ -1309,8 +1297,7 @@ ctx.drawImage(this._shieldLayer, 0, 0);
           const color = s.colors.row[r % s.colors.row.length];
           const x = s.fx + c*fm.stepX;
           const y = s.fy + r*fm.stepY;
-          const img = this._getBitmapCanvas(bmp, enemyScale, color);
-          ctx.drawImage(img, x, y);
+          drawBitmap(bmp, x, y, enemyScale, color);
 
           if(s.hpGrid[r][c] >= 2){
             ctx.fillStyle="rgba(255,255,255,.65)";
@@ -1319,10 +1306,7 @@ ctx.drawImage(this._shieldLayer, 0, 0);
         }
       }
 
-      {
-        const img = this._getBitmapCanvas(SHIP, s.U, s.colors.player());
-        ctx.drawImage(img, s.px - s.shipW/2, s.playerTopY());
-      }
+      drawBitmap(SHIP, s.px - s.shipW/2, s.playerTopY(), s.U, s.colors.player());
 
       ctx.fillStyle="cyan";
       for(const b of this.pj.playerBullets.active) ctx.fillRect(b.x,b.y,s.BW,s.BH);
