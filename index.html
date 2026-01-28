@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport"
   content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<title>Invader Stable v8.4.1 (stabilized).1 (Stabilized)</title>
+<title>Invader Stable v8.4.2 (Stabilized)</title>
 <style>
   html,body{
     margin:0;padding:0;background:#000;overflow:hidden;
@@ -242,6 +242,8 @@
 
   // --- Restart by tapping only the "Tap or Enter" hint (GAME OVER) ---
   function bindRestartHint(){
+    // Stabilization: restart is handled globally (tap anywhere). Keep this for legacy safety.
+    return;
     const hint = document.getElementById("restartHint");
     if(!hint) return;
 
@@ -275,6 +277,10 @@
   const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
   const aabb = (ax,ay,aw,ah,bx,by,bw,bh) =>
     !(ax+aw<bx || ax>bx+bw || ay+ah<by || ay>by+bh);
+
+  const isFiniteNum = (v) => Number.isFinite(v);
+  const safeNum = (v, fallback=0) => (Number.isFinite(v) ? v : fallback);
+
 
   function resizeCanvas(){
       // HiDPI: render at devicePixelRatio (capped for performance)
@@ -1708,8 +1714,13 @@ resetStars(){
       shields.relayoutShields();
 
       const fm = state.getFM();
-      state.fx = (state.w - fm.totalW)/2;
-      state.fy = fm.baseY;
+      // Keep formation on-screen after resize (avoid NaN / too-low spawn)
+      state.fx = safeNum((state.w - fm.totalW)/2, 0);
+
+      const formationH = (state.rows-1) * fm.stepY + state.enemyH;
+      const maxFy = Math.max(0, state.playerTopY() - formationH - 6);
+      const baseFy = safeNum(fm.baseY, 0);
+      state.fy = clamp(baseFy, 0, maxFy);
 
       if(state.paused) Input.stickReset();
     });
@@ -1723,11 +1734,20 @@ resetStars(){
     const dtSec = dtMs / 1000;
     const T = { ms: dtMs, sec: dtSec, f: dtSec * 60 };
 
-    const fm = state.getFM();
-
-    logic.update(T, fm);
-    collisions.detect(fm);
-    renderer.render(fm);
+        try{
+      const fm = state.getFM();
+      
+          logic.update(T, fm);
+          collisions.detect(fm);
+          renderer.render(fm);
+    }catch(err){
+      console.error(err);
+      // Fail-safe: show error and allow tap-to-restart
+      state.over = true;
+      state.paused = false;
+      msgEl.innerHTML = 'ERROR<br><span id="restartHint">TAP / CLICK / ENTER</span>';
+      msgEl.style.pointerEvents = "none";
+    }
 
     requestAnimationFrame(loop);
   }
