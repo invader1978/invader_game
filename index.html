@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport"
+  content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Invader Stable v8.4.2 (Stabilized)</title>
+<style>
+  html,body{
+    margin:0;padding:0;background:#000;overflow:hidden;
+    touch-action:none;
+    overscroll-behavior:none;
+    -webkit-overflow-scrolling:auto;
+    -webkit-text-size-adjust:100%;
+    /* prevent long-press text selection / callout */
+    -webkit-user-select:none;
+    user-select:none;
+    -webkit-touch-callout:none;
+    -webkit-user-drag:none;
+  }
+  canvas{position:fixed;inset:0;display:block;touch-action:none;pointer-events:auto}
+
+  /* also disable selection on UI elements */
+  #msg,.controls,button{
+    -webkit-user-select:none;
+    user-select:none;
+    -webkit-touch-callout:none;
+    -webkit-user-drag:none;
+  }
+
+  #hud{
+    position:fixed;top:8px;left:8px;z-index:10;color:#fff;
+    font:14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    user-select:none;pointer-events:none;
+  }
+
+  #pauseBtn{
+    position:fixed;top:10px;right:10px;z-index:80;
+    padding:8px 12px;font:700 14px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    color:#fff;background:rgba(0,0,0,.55);
+    border:2px solid rgba(255,255,255,.25);border-radius:10px;
+    cursor:pointer;pointer-events:auto;user-select:none;
+    touch-action:manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #msg{
+    position:fixed;inset:0;display:flex;align-items:flex-start;justify-content:center;
+    padding-top:clamp(24px,10vh,140px);
+    box-sizing:border-box;
+    color:#fff;font:700 40px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    text-shadow:0 2px 0 rgba(0,0,0,.5);
+    z-index:40;pointer-events:none;text-align:center;white-space:pre-line;
+  }
+
+  #restartHint{
+    display:inline-block;
+    margin-top:14px;
+    padding:10px 14px;
+    font-size:24px;
+    font-weight:700;
+    letter-spacing:0.02em;
+    opacity:0.9;
+    cursor:pointer;
+    pointer-events:auto;
+    text-decoration:none;
+    touch-action:manipulation;
+  }
+  #restartHint:active{ opacity:0.6; }
+
+  /* ===== Mobile controls ===== */
+  .controls{position:fixed;inset:0;z-index:70;pointer-events:none}
+
+  #stickBase,#stickKnob{
+    position:fixed;border-radius:50%;
+    pointer-events:auto;
+    touch-action:none !important;
+    user-select:none;
+    -webkit-user-select:none;
+    -webkit-touch-callout:none;
+    -webkit-tap-highlight-color: transparent;
+    transform: translateZ(0);
+  }
+  #stickBase{
+    width:140px;height:140px;left:22px;bottom:22px;
+    background:rgba(40,40,40,.55);
+    border:2px solid rgba(255,255,255,.25);
+  }
+  #stickKnob{
+    width:74px;height:74px;left:22px;bottom:22px;
+    background:rgba(0,0,0,.65);
+    border:2px solid rgba(255,255,255,.20);
+  }
+
+  #shootBtn{
+    position:fixed;width:120px;height:120px;
+    right:22px;bottom:28px;border-radius:50%;
+    pointer-events:auto;
+    touch-action:none !important;
+    -webkit-touch-callout:none;
+    -webkit-user-select:none;
+    user-select:none;
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+    transform: translateZ(0);
+    -webkit-appearance:none;
+    appearance:none;
+    outline:none;
+
+    background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.35),rgba(255,0,0,.9));
+    border:2px solid rgba(255,255,255,.25);
+  }
+  #shootLabel{
+    position:fixed;right:22px;bottom:160px;
+    color:#fff;font:800 14px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    padding:6px 10px;border:2px solid rgba(255,255,255,.25);
+    border-radius:10px;background:rgba(0,0,0,.45);pointer-events:none;
+  }
+
+  @media (pointer: fine) {
+    .controls{display:none;}
+  }
+
+  button:focus-visible{
+    outline:2px solid #fff;
+    outline-offset:3px;
+  }
+
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  SCORE <span id="score">0</span> /
+  WAVE <span id="wave">1</span><br>
+  LIFE <span id="life">❤️❤️❤️</span>
+</div>
+
+<button id="pauseBtn" type="button" aria-label="pause" aria-pressed="false">PAUSE</button>
+<div id="msg"></div>
+
+<div class="controls" id="controls">
+  <div id="stickBase"></div>
+  <div id="stickKnob"></div>
+  <button id="shootBtn" type="button" aria-label="shoot"></button>
+  <div id="shootLabel">SHOT</div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* =========================================================
+     v8.4
+     - ③入力処理整理：playerCanShoot廃止（クールダウン一本化）
+     - ④パフォーマンス：星/シールド削りの割当削減、描画スケールキャッシュ
+     - ⑥モバイル操作：スティック/ボタンを画面サイズに追従
+
+     v8.2
+     - v8.1 の改善点（①②③-8④）を維持
+     - ★追加：自機の発射クールダウン（連射抑制）
+  ========================================================= */
+
+  const CONFIG = {
+    enemy: {
+      cols: 11,
+      rows: 5,
+
+      // 移動
+      moveBaseInterval: 150,
+      moveMinInterval: 12,
+      moveLastOneCap: 10,
+      moveCurvePow: 1.55,
+      waveSpeedMulK: 0.06,
+
+      stepMoveXBaseMulU: 1.35,
+      stepMoveXWaveK: 0.03,
+      stepMoveXLastOneMul: 0.90,
+
+      stepDownMulU: 1.6,
+      wallPauseMs: 70,
+      wallMargin: 10,
+
+      // 発射（指数カーブ）
+      fireIntervalBase: 140,
+      fireIntervalDecay: 0.93,
+      fireIntervalMin: 22,
+
+      maxBulletsBase: 2,
+      maxBulletsWaveDiv: 4,
+      maxBulletsCap: 12,
+
+      burstBase: 1,
+      burstWaveDiv: 6,
+      burstCap: 3,
+    },
+    shield: {
+      contactEvery: 3,
+      contactMaxPerShield: 8,
+      contactPerEnemy: 3,
+      contactHitsCap: 40,
+      contactYSlack: 24,
+    },
+    player: {
+      speedPC: 4,
+      speedMobile: 3,
+      invincibleFrames: 60,
+      bulletW: 4,
+      bulletH: 10,
+
+      // ★追加：発射間隔（ms） 例）250/350/500
+      shootCooldownMs: 500
+    }
+  };
+
+  const UA = navigator.userAgent || "";
+  const IS_IOS = /iP(hone|ad|od)/.test(UA);
+
+  const cv = document.getElementById("cv");
+  const ctx = cv.getContext("2d", { alpha:false, desynchronized:true })
+           || cv.getContext("2d", { alpha:false })
+           || cv.getContext("2d");
+
+  let DPR = 1;
+
+  let state = null; // declared early so resizeCanvas can update viewport safely
+  let VIEW_W = innerWidth, VIEW_H = innerHeight;
+
+
+  // iOSジェスチャ抑制：canvas 限定
+  if (IS_IOS) {
+    ["gesturestart","gesturechange","gestureend","dblclick"].forEach(t => {
+      cv.addEventListener(t, e => e.preventDefault(), { passive:false });
+    });
+  }
+
+  const scoreEl = document.getElementById("score");
+  const waveEl  = document.getElementById("wave");
+  const lifeEl  = document.getElementById("life");
+  const msgEl   = document.getElementById("msg");
+  const pauseBtn = document.getElementById("pauseBtn");
+
+  // --- Restart by tapping only the "Tap or Enter" hint (GAME OVER) ---
+  function bindRestartHint(){
+    // Stabilization: restart is handled globally (tap anywhere). Keep this for legacy safety.
+    return;
+    const hint = document.getElementById("restartHint");
+    if(!hint) return;
+
+    const handler = (e) => {
+      if(!state.over || state.paused) return;
+      logic.reset();
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    // Replace handlers (no stacking)
+    hint.onpointerup = null;
+    hint.onclick = null;
+    hint.ontouchend = null;
+
+    if("PointerEvent" in window){
+      hint.onpointerup = handler;
+      hint.onclick = handler; // desktop fallback
+    }else{
+      hint.ontouchend = handler;
+      hint.onclick = handler;
+    }
+  }
+
+  const controls = document.getElementById("controls");
+  const stickBase = document.getElementById("stickBase");
+  const stickKnob = document.getElementById("stickKnob");
+  const shootBtn = document.getElementById("shootBtn");
+  const shootLabel = document.getElementById("shootLabel");
+
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const aabb = (ax,ay,aw,ah,bx,by,bw,bh) =>
+    !(ax+aw<bx || ax>bx+bw || ay+ah<by || ay>by+bh);
+
+  const isFiniteNum = (v) => Number.isFinite(v);
+  const safeNum = (v, fallback=0) => (Number.isFinite(v) ? v : fallback);
+
+
+  function resizeCanvas(){
+      // HiDPI: render at devicePixelRatio (capped for performance)
+      DPR = Math.min(2, window.devicePixelRatio || 1);
+      const w = innerWidth, h = innerHeight;
+      VIEW_W = w; VIEW_H = h;
+      if(state) state.updateViewport(w,h);
+      cv.style.width = w + "px";
+      cv.style.height = h + "px";
+      cv.width  = Math.max(1, Math.round(w * DPR));
+      cv.height = Math.max(1, Math.round(h * DPR));
+      // Draw in CSS pixels
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+    }
+  function calcU(w=innerWidth,h=innerHeight){
+    const minDim = Math.min(w,h);
+    const u = Math.round(minDim/110);
+    return clamp(u, 4, 12);
+  }
+  function isCoarse(){
+    return (window.matchMedia && window.matchMedia("(pointer: coarse)").matches)
+      || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+  }
+
+  const SHIP = [
+    "000010000","000111000","000111000",
+    "011111110","111111111","111111111","111111111"
+  ];
+
+  const ENEMY_TYPES = [
+    { a:["0100010","1111111","1011101","0100010"], b:["0100010","1111111","0101010","1010101"] },
+    { a:["0011100","0111110","1101011","0111110"], b:["0011100","1111111","0101010","1010101"] },
+    { a:["0110110","1111111","0101010","1010101"], b:["0011100","0111110","1101011","0111110"] },
+    { a:["0011100","1111111","1010101","0100010"], b:["0011100","0111110","0101010","1010101"] }
+  ];
+
+  const SHIELD = [
+    "00111100","01111110","11111111","11111111","11111111","11000011"
+  ];
+
+  function drawBitmap(lines, x, y, scale, color){
+      ctx.fillStyle = color;
+      const h = lines.length;
+      for(let r=0;r<h;r++){
+        const row = lines[r];
+        const y0 = y + r*scale;
+        const w = row.length;
+        for(let c=0;c<w;c++){
+          if(row[c]==="1") ctx.fillRect(x + c*scale, y0, scale, scale);
+        }
+      }
+    }
+
+  class Pool {
+    constructor(createFn, resetFn, initial=64){
+      this._create = createFn;
+      this._reset = resetFn || (()=>{});
+      this._free = [];
+      this._active = [];
+      for(let i=0;i<initial;i++) this._free.push(this._create());
+    }
+    acquire(){
+      const o = this._free.length ? this._free.pop() : this._create();
+      this._active.push(o);
+      return o;
+    }
+    releaseAt(i){
+      const o = this._active[i];
+      this._active[i] = this._active[this._active.length-1];
+      this._active.pop();
+      this._reset(o);
+      this._free.push(o);
+    }
+    get active(){ return this._active; }
+    clear(){
+      for(let i=this._active.length-1;i>=0;i--) this.releaseAt(i);
+    }
+  }
+
+  class GameState {
+    constructor(){
+      this.U = calcU();
+      this.isMobile = isCoarse();
+
+      // viewport cache (CSS pixels)
+      this.w = VIEW_W;
+      this.h = VIEW_H;
+
+      this.shipW = 0; this.shipH = 0;
+      this.enemyW = 0; this.enemyH = 0;
+      this.shieldW = 0; this.shieldH = 0;
+
+      this.score = 0;
+      this.wave = 1;
+      this.life = 3;
+
+      this.ready = true;
+      this.clearing = false;
+      this.over = false;
+      this.paused = false;
+
+      this.hitStop = 0;
+      this._pendingGameOver = false;
+
+      this.invincible = 0;
+      this.safeTimer = 0;
+
+      this.holdL = false;
+      this.holdR = false;
+      this.playerBottomPx = 70;
+      this.px = this.w/2;
+
+      // ★追加：発射クールダウン残り（ms）
+      this.shootCd = 0;
+
+      // timers (setTimeout handles)
+      this._timers = new Set();
+      this._msgTimer = 0;
+
+      this.stars = [];
+
+      this.cols = CONFIG.enemy.cols;
+      this.rows = CONFIG.enemy.rows;
+
+      this.fx = 0; this.fy = 0; this.dir = 1;
+      this.prevFx = 0; this.prevFy = 0;
+
+      this.enemyInitialCount = 0;
+      this.enemyFrame = 0;
+      this.enemyAnimTick = 0;
+      this.enemyShootTick = 0;
+      this.moveAcc = 0;
+      this.wallPause = 0;
+
+      this.hpGrid = [];
+
+      this.aliveIds = [];
+      this.aliveIndex = null; // TypedArray
+      this.aliveStats = { minC:0, maxC:this.cols-1, maxR:this.rows-1, count:0 };
+      this.aliveDirty = true;
+
+      this.shields = [];
+      this.shieldBoxes = [];
+
+      this.shieldContactTick = 0;
+      this.shieldContactEvery = CONFIG.shield.contactEvery;
+
+      this.BW = CONFIG.player.bulletW;
+      this.BH = CONFIG.player.bulletH;
+
+      this.colors = {
+        shield: () => "#ff3333",
+        player: () => "#44ff88",
+        row: ["#ff4d4d","#ffb84d","#ffff4d","#4dff4d","#4dd2ff"]
+      };
+
+      this.fm = { stepX:0, stepY:0, totalW:0, baseY:0, minGapX:0, minGapY:0 };
+      this.fmDirty = true;
+    }
+
+    updateLifeHud(){
+      lifeEl.textContent = "❤️".repeat(Math.max(0, this.life));
+    }
+
+
+    updateViewport(w,h){
+      this.w = w; this.h = h;
+      const newU = calcU(w,h);
+      if(newU !== this.U){
+        this.U = newU;
+        // pointer capability can change (e.g., docking) but cheap to refresh
+        this.isMobile = isCoarse();
+      }
+      this.recalcSizes();
+      this.clampPlayer();
+      this.fmDirty = true;
+    }
+
+    // timer manager (for scheduled state transitions/messages)
+    setTimer(fn, ms){
+      const id = setTimeout(() => {
+        this._timers.delete(id);
+        fn();
+      }, ms);
+      this._timers.add(id);
+      return id;
+    }
+    clearTimer(id){
+      if(!id) return;
+      clearTimeout(id);
+      this._timers.delete(id);
+    }
+    clearAllTimers(){
+      for(const id of this._timers) clearTimeout(id);
+      this._timers.clear();
+      this._msgTimer = 0;
+    }
+
+    playerTopY(){
+      return this.h - this.playerBottomPx - this.shipH;
+    }
+
+    clampPlayer(){
+      this.px = clamp(this.px, this.shipW/2, this.w - this.shipW/2);
+    }
+
+    recalcSizes(){
+      this.shipW = SHIP[0].length * this.U;
+      this.shipH = SHIP.length * this.U;
+
+      const margin = 12;
+      const minGapX = 0.90 * this.U;
+      const availW = Math.max(120, this.w - margin*2);
+      const maxEnemyW = (availW - (this.cols-1)*minGapX) / this.cols;
+      const scale = this.isMobile ? 0.78 : 0.86;
+      const targetW = maxEnemyW * scale;
+
+      const maxMul = this.isMobile ? 5.8 : 8.5;
+      this.enemyW = clamp(targetW, 2.6*this.U, maxMul*this.U);
+      this.enemyH = this.enemyW * (4/7);
+
+      this.shieldW = 8*this.U;
+      this.shieldH = 6*this.U;
+
+      this.fmDirty = true;
+    }
+
+resetStars(){
+  const N = 120;
+  if(this.stars.length !== N){
+    this.stars.length = 0;
+    for(let i=0;i<N;i++){
+      this.stars.push({x:0,y:0,s:1});
+    }
+  }
+  for(let i=0;i<N;i++){
+    const st = this.stars[i];
+    st.x = Math.random()*this.w;
+    st.y = Math.random()*this.h;
+    st.s = 0.6 + Math.random()*1.2;
+  }
+}
+
+    _computeFormationMetrics(){
+      const minGapX = 0.90*this.U, minGapY = 1.10*this.U;
+      const stepX = this.enemyW + minGapX;
+      const stepY = this.enemyH + minGapY;
+      const totalW = this.cols*this.enemyW + (this.cols-1)*minGapX;
+      const baseY = this.isMobile ? Math.max(52, this.h*0.14) : Math.max(90, this.h*0.22);
+      this.fm = { stepX, stepY, totalW, baseY, minGapX, minGapY };
+      this.fmDirty = false;
+    }
+
+    getFM(){
+      if(this.fmDirty) this._computeFormationMetrics();
+      return this.fm;
+    }
+
+    rowKillScore(r){
+      return (this.rows - r) * 10;
+    }
+
+    enemyProfile(){
+      const e = CONFIG.enemy;
+      const fireInterval = Math.max(
+        e.fireIntervalMin,
+        Math.floor(e.fireIntervalBase * Math.pow(e.fireIntervalDecay, Math.max(0, this.wave-1)))
+      );
+      const maxBullets = Math.min(
+        e.maxBulletsCap,
+        e.maxBulletsBase + Math.floor((this.wave-1) / e.maxBulletsWaveDiv)
+      );
+      const burst = Math.min(
+        e.burstCap,
+        e.burstBase + Math.floor((this.wave-1) / e.burstWaveDiv)
+      );
+      return { fireInterval, maxBullets, burst };
+    }
+
+    buildShieldBits(){
+      const h = SHIELD.length, w = SHIELD[0].length;
+      const bits = Array.from({length:h}, (_,r)=>Array.from({length:w},(_,c)=>SHIELD[r][c]==="1"));
+      return {bits,w,h};
+    }
+
+    computeShieldLayout(){
+      const topMin = 40;
+      const gapFromPlayer = 14;
+      const defaultOffset = 80;
+
+      const playerY = this.playerTopY();
+      let y = playerY - defaultOffset;
+
+      const maxY = playerY - this.shieldH - gapFromPlayer;
+      y = Math.min(y, maxY);
+      y = Math.max(y, topMin);
+
+      if(maxY < topMin){
+        y = Math.max(0, maxY);
+      }
+
+      const xs = [0.2,0.4,0.6,0.8];
+      return xs.map(v => ({ x: this.w * v - this.shieldW/2, y }));
+    }
+  }
+
+  class EnemySystem {
+    constructor(state){ this.s = state; }
+
+    _rebuildAliveCache(){
+      const s = this.s;
+      const total = s.rows * s.cols;
+      s.aliveIds.length = 0;
+
+      s.aliveIndex = new Int16Array(total);
+      s.aliveIndex.fill(-1);
+
+      const enemyScale = Math.max(1, Math.round(s.enemyW/7));
+      for(let r=0;r<s.rows;r++){
+        for(let c=0;c<s.cols;c++){
+          if(s.hpGrid[r][c] > 0){
+            const id = r*s.cols + c;
+            s.aliveIndex[id] = s.aliveIds.length;
+            s.aliveIds.push(id);
+          }
+        }
+      }
+      s.aliveDirty = true;
+      this._refreshAliveStatsIfNeeded();
+      s.enemyInitialCount = s.aliveIds.length;
+    }
+
+    _refreshAliveStatsIfNeeded(){
+      const s = this.s;
+      if(!s.aliveDirty) return;
+      s.aliveDirty = false;
+
+      let minC = s.cols, maxC = -1, maxR = -1;
+      for(let i=0;i<s.aliveIds.length;i++){
+        const id = s.aliveIds[i];
+        const r = (id / s.cols) | 0;
+        const c = id - r*s.cols;
+        if(c < minC) minC = c;
+        if(c > maxC) maxC = c;
+        if(r > maxR) maxR = r;
+      }
+      if(maxC < 0){
+        minC = 0; maxC = s.cols-1; maxR = s.rows-1;
+      }
+      s.aliveStats = { minC, maxC, maxR, count: s.aliveIds.length };
+    }
+
+    spawnEnemies(){
+      const s = this.s;
+      const fm = s.getFM();
+      s.cols = CONFIG.enemy.cols; s.rows = CONFIG.enemy.rows;
+
+      const hp2 = (s.wave >= 4);
+      s.hpGrid = Array.from({length:s.rows}, () => Array.from({length:s.cols}, () => 1));
+      if (hp2) {
+        for (let r=0;r<Math.min(2,s.rows);r++){
+          for (let c=0;c<s.cols;c++) s.hpGrid[r][c] = 2;
+        }
+      }
+
+      s.fx = (s.w - fm.totalW)/2;
+      s.fy = fm.baseY;
+      s.dir = 1;
+
+      s.moveAcc = 0;
+      s.wallPause = 0;
+
+      s.enemyFrame = 0;
+      s.enemyAnimTick = 0;
+      s.enemyShootTick = 0;
+
+      this._rebuildAliveCache();
+    }
+
+    onEnemyDamagedOrKilled(r,c){
+      const s = this.s;
+      if(s.hpGrid[r][c] > 0) return;
+
+      const id = r*s.cols + c;
+      const idx = s.aliveIndex[id];
+      if(idx < 0) return;
+
+      const lastId = s.aliveIds[s.aliveIds.length-1];
+      s.aliveIds[idx] = lastId;
+      s.aliveIndex[lastId] = idx;
+      s.aliveIds.pop();
+      s.aliveIndex[id] = -1;
+
+      s.aliveDirty = true;
+    }
+
+    countAlive(){ return this.s.aliveIds.length; }
+
+    randomAliveRC(){
+      const s = this.s;
+      const n = s.aliveIds.length;
+      if(!n) return null;
+      const id = s.aliveIds[(Math.random()*n)|0];
+      const r = (id / s.cols) | 0;
+      const c = id - r*s.cols;
+      return {r,c};
+    }
+
+    updateAnim(){
+      const s = this.s;
+      s.enemyAnimTick++;
+      if(s.enemyAnimTick >= 28){
+        s.enemyAnimTick = 0;
+        s.enemyFrame = 1 - s.enemyFrame;
+      }
+    }
+
+    getAliveStats(){
+      this._refreshAliveStatsIfNeeded();
+      return this.s.aliveStats;
+    }
+  }
+
+  class ShieldSystem {
+    constructor(state){ this.s = state; }
+
+    spawnShields(){
+      const s = this.s;
+      s.shields.length = 0;
+      const proto = s.buildShieldBits();
+      const layout = s.computeShieldLayout();
+      for (let i=0;i<layout.length;i++){
+        const {x,y} = layout[i];
+        const bits = proto.bits.map(row=>row.slice());
+        s.shields.push({x,y,bits,w:proto.w,h:proto.h});
+      }
+      this.rebuildShieldBoxes();
+    }
+
+    relayoutShields(){
+      const s = this.s;
+      if(!s.shields.length){ this.spawnShields(); return; }
+      const layout = s.computeShieldLayout();
+      for(let i=0;i<s.shields.length && i<layout.length;i++){
+        s.shields[i].x = layout[i].x;
+        s.shields[i].y = layout[i].y;
+      }
+      this.rebuildShieldBoxes();
+    }
+
+    rebuildShieldBoxes(){
+      const s = this.s;
+      s.shieldBoxes = s.shields.map(sh => ({
+        x:sh.x, y:sh.y, w:s.shieldW, h:s.shieldH,
+        ref:sh
+      }));
+    }
+
+    shieldHitAndDamage(bx,by,bw,bh){
+      const s = this.s;
+      if (!s.shields.length) return false;
+
+      const cx = bx + bw/2;
+      let best = null;
+      let bestD = Infinity;
+      for (let i=0;i<s.shieldBoxes.length;i++){
+        const box = s.shieldBoxes[i];
+        const mid = box.x + box.w/2;
+        const d = Math.abs(cx - mid);
+        if (d < bestD) { bestD = d; best = box; }
+      }
+
+      const tryDamage = (box) => {
+        if(!aabb(bx,by,bw,bh, box.x,box.y, box.w,box.h)) return false;
+        const sh = box.ref;
+
+        const rx = clamp(Math.floor(((bx+bw/2)-sh.x)/s.U), 0, sh.w-1);
+        const ry = clamp(Math.floor(((by+bh/2)-sh.y)/s.U), 0, sh.h-1);
+
+        let pickR = -1, pickC = -1, seen = 0;
+        for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+          const cx = rx + dx, cy = ry + dy;
+          if(cy>=0 && cy<sh.h && cx>=0 && cx<sh.w && sh.bits[cy][cx]){
+            seen++;
+            // reservoir sampling
+            if((Math.random()*seen) < 1){ pickR = cy; pickC = cx; }
+          }
+        }
+        if(pickR >= 0) sh.bits[pickR][pickC] = false;
+        return true;
+      };
+
+      if (best && tryDamage(best)) return true;
+      for (let i=0;i<s.shieldBoxes.length;i++){
+        const box = s.shieldBoxes[i];
+        if (box === best) continue;
+        if (tryDamage(box)) return true;
+      }
+      return false;
+    }
+
+    damageShieldRandom(shield, hits){
+      hits = Math.max(0, hits|0);
+      if(!hits) return;
+      let attempts = hits * 10;
+      while(hits > 0 && attempts-- > 0){
+        const r = (Math.random() * shield.h) | 0;
+        const c = (Math.random() * shield.w) | 0;
+        if(shield.bits[r][c]){
+          shield.bits[r][c] = false;
+          hits--;
+        }
+      }
+    }
+  }
+
+  class ProjectileSystem {
+    constructor(state, enemySystem, shieldSystem){
+      this.s = state;
+      this.enemies = enemySystem;
+      this.shields = shieldSystem;
+
+      const resetBullet = (b)=>{ b.x=0; b.y=0; b.v=0; };
+      const resetBoom = (p)=>{ p.x=0; p.y=0; p.vx=0; p.vy=0; p.t=0; };
+
+      this.playerBullets = new Pool(()=>({x:0,y:0,v:0}), resetBullet, 32);
+      this.enemyBullets  = new Pool(()=>({x:0,y:0,v:0}), resetBullet, 64);
+      this.booms         = new Pool(()=>({x:0,y:0,vx:0,vy:0,t:0}), resetBoom, 128);
+    }
+
+    clearAll(){
+      this.playerBullets.clear();
+      this.enemyBullets.clear();
+      this.booms.clear();
+    }
+
+    boom(x,y){
+      for(let i=0;i<10;i++){
+        const p = this.booms.acquire();
+        p.x = x; p.y = y;
+        p.vx = (Math.random()-.5)*5;
+        p.vy = (Math.random()-.5)*5;
+        p.t = 18;
+      }
+    }
+
+    // ★変更：発射クールダウンをチェック
+    shootPlayerOnce(){
+      const s = this.s;
+      if(s.paused) return;
+      if(s.ready || s.clearing || s.over) return;
+
+      // クールダウン中は発射しない
+      if(s.shootCd > 0) return;
+
+      // 発射したらクールダウン開始
+      s.shootCd = CONFIG.player.shootCooldownMs;
+
+      const b = this.playerBullets.acquire();
+      b.x = s.px - s.BW/2;
+      b.y = s.playerTopY();
+      b.v = -10;
+    }
+
+    enemyShoot(fm){
+      const s = this.s;
+      if(s.paused) return;
+      if(s.ready || s.clearing || s.over) return;
+
+      const prof = s.enemyProfile();
+      if(this.enemyBullets.active.length >= prof.maxBullets) return;
+
+      const pick = this.enemies.randomAliveRC();
+      if(!pick) return;
+
+      const {r,c} = pick;
+      const ex = s.fx + c*fm.stepX, ey = s.fy + r*fm.stepY;
+
+      const baseV = (s.isMobile ? 5 : 7);
+      const add = Math.min(3, (s.wave-1) * 0.18);
+      const v = baseV + add;
+
+      const shots = Math.min(prof.burst, prof.maxBullets - this.enemyBullets.active.length);
+      for(let k=0;k<shots;k++){
+        const spread = (k - (shots-1)/2) * (s.BW + 2);
+        const b = this.enemyBullets.acquire();
+        b.x = ex + s.enemyW/2 - s.BW/2 + spread;
+        b.y = ey + s.enemyH;
+        b.v = v;
+      }
+    }
+
+    update(T){
+      const s = this.s;
+
+      const pbs = this.playerBullets.active;
+      for(let i=pbs.length-1;i>=0;i--){
+        const b = pbs[i];
+        b.y += b.v * T.f;
+        if(b.y < -20) this.playerBullets.releaseAt(i);
+      }
+
+      const ebs = this.enemyBullets.active;
+      for(let i=ebs.length-1;i>=0;i--){
+        const b = ebs[i];
+        b.y += b.v * T.f;
+        if(b.y > s.h + 30) this.enemyBullets.releaseAt(i);
+      }
+
+      const booms = this.booms.active;
+      for(let i=booms.length-1;i>=0;i--){
+        const p = booms[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.t--;
+        if(p.t <= 0) this.booms.releaseAt(i);
+      }
+    }
+  }
+
+  class CollisionSystem {
+    constructor(state, enemies, shields, projectiles){
+      this.s = state;
+      this.enemies = enemies;
+      this.shields = shields;
+      this.pj = projectiles;
+    }
+
+    triggerRamming(contactFy){
+      const s = this.s;
+      if(s.over) return;
+      s.fy = contactFy;
+
+      s.hitStop = 200;
+      if(s._pendingGameOver) return;
+      s._pendingGameOver = true;
+
+      s.setTimer(() => {
+        s.hitStop = 0;
+        s._pendingGameOver = false;
+        this.gameOver();
+      }, 200);
+    }
+
+    gameOver(){
+      const s = this.s;
+      if(s.over) return;
+      s.over = true;
+      s.paused = false;
+      pauseBtn.textContent = "PAUSE";
+      pauseBtn.setAttribute("aria-pressed", "false");
+      msgEl.innerHTML = 'GAME OVER<br><span id="restartHint">TAP / CLICK / ENTER</span>';
+      msgEl.style.pointerEvents = "none";
+      s.holdL = false;
+      s.holdR = false;
+    }
+
+    nextWave(){
+      const s = this.s;
+      s.clearing = true;
+      if(!s.paused) msgEl.textContent = "CLEAR!";
+      s.setTimer(() => {
+        if(s.paused) return;
+        msgEl.textContent = "";
+      msgEl.style.pointerEvents = "none";
+        s.wave++;
+        waveEl.textContent = s.wave;
+        s.clearing = false;
+        this.enemies.spawnEnemies();
+        this.shields.spawnShields();
+        this.showReady();
+      }, 900);
+    }
+
+    showReady(){
+      const s = this.s;
+      s.clearTimer(s._msgTimer);
+      if(!s.paused) msgEl.textContent = "";
+      s.ready = true;
+      s.safeTimer = Math.floor(s.wave * 0.5 * 60);
+      s._msgTimer = s.setTimer(() => {
+        if(!s.over && !s.paused) msgEl.textContent = "";
+        s.ready = false;
+        s._msgTimer = 0;
+      }, 900);
+    }
+
+    detect(fm){
+      const s = this.s;
+      if(s.paused) return;
+      if(s.hitStop > 0) return;
+
+      // 敵がシールドに触れている間の削り判定を軽量化
+      s.shieldContactTick++;
+      if(s.shieldContactTick % s.shieldContactEvery === 0 && s.shieldBoxes.length && s.aliveIds.length){
+
+        const st = this.enemies.getAliveStats();
+        const maxAliveR = st.maxR;
+        const enemyTop = s.fy;
+        const enemyBottom = s.fy + maxAliveR * fm.stepY + s.enemyH;
+
+        let anyShieldInBand = false;
+        const slack = CONFIG.shield.contactYSlack;
+        for(const box of s.shieldBoxes){
+          if(!(box.y > enemyBottom + slack || (box.y + box.h) < enemyTop - slack)){
+            anyShieldInBand = true;
+            break;
+          }
+        }
+
+        if(anyShieldInBand){
+          const aliveIds = s.aliveIds;
+
+          for(const box of s.shieldBoxes){
+            if(box.y > enemyBottom + slack || (box.y + box.h) < enemyTop - slack) continue;
+
+            const cMin = clamp(Math.floor((box.x - s.fx) / fm.stepX) - 1, 0, s.cols-1);
+            const cMax = clamp(Math.floor(((box.x + box.w) - s.fx) / fm.stepX) + 1, 0, s.cols-1);
+
+            let contacts = 0;
+
+            for(let i=0;i<aliveIds.length;i++){
+              const id = aliveIds[i];
+              const r = (id / s.cols) | 0;
+              const c = id - r*s.cols;
+
+              if(c < cMin || c > cMax) continue;
+
+              const ex = s.fx + c*fm.stepX;
+              const ey = s.fy + r*fm.stepY;
+
+              if(aabb(ex, ey, s.enemyW, s.enemyH, box.x, box.y, box.w, box.h)){
+                contacts++;
+                if(contacts >= CONFIG.shield.contactMaxPerShield) break;
+              }
+            }
+
+            if(contacts > 0){
+              const hits = Math.min(CONFIG.shield.contactHitsCap, contacts * CONFIG.shield.contactPerEnemy);
+              this.shields.damageShieldRandom(box.ref, hits);
+            }
+          }
+        }
+      }
+
+      // 敵の体当たり（スイープAABB）
+      if(!s.over && !s.ready && !s.clearing){
+        const shipX = s.px - s.shipW/2;
+        const shipY = s.playerTopY();
+        const shipW = s.shipW;
+        const shipH = s.shipH;
+
+        const fx0 = (typeof s.prevFx === "number") ? s.prevFx : s.fx;
+        const fy0 = (typeof s.prevFy === "number") ? s.prevFy : s.fy;
+
+        const st = this.enemies.getAliveStats();
+        const maxAliveR = st.maxR;
+
+        const aliveIds = s.aliveIds;
+        for(let i=0;i<aliveIds.length;i++){
+          const id = aliveIds[i];
+          const r = (id / s.cols) | 0;
+          const c = id - r*s.cols;
+
+          const exA = fx0 + c*fm.stepX;
+          const eyA = fy0 + r*fm.stepY;
+          const exB = s.fx + c*fm.stepX;
+          const eyB = s.fy + r*fm.stepY;
+
+          const sx = Math.min(exA, exB);
+          const sy = Math.min(eyA, eyB);
+          const sw = Math.max(exA + s.enemyW, exB + s.enemyW) - sx;
+          const sh = Math.max(eyA + s.enemyH, eyB + s.enemyH) - sy;
+
+          if(aabb(sx, sy, sw, sh, shipX, shipY, shipW, shipH)){
+            if(maxAliveR >= 0){
+              const enemyBottom = s.fy + maxAliveR*fm.stepY + s.enemyH;
+              const over = enemyBottom - shipY;
+              if(over > 0) s.fy -= over;
+            }
+
+            const HIT_MS = 260;
+            s.hitStop = Math.max(s.hitStop, HIT_MS);
+
+            if(!s._pendingGameOver){
+              s._pendingGameOver = true;
+              s.setTimer(() => {
+                s.hitStop = 0;
+                s._pendingGameOver = false;
+                this.gameOver();
+              }, HIT_MS);
+            }
+            return;
+          }
+        }
+      }
+
+      // 弾 vs シールド
+      const pbs = this.pj.playerBullets.active;
+      for(let i=pbs.length-1;i>=0;i--){
+        const b = pbs[i];
+        if(this.shields.shieldHitAndDamage(b.x,b.y,s.BW,s.BH)) this.pj.playerBullets.releaseAt(i);
+      }
+      const ebs = this.pj.enemyBullets.active;
+      for(let i=ebs.length-1;i>=0;i--){
+        const b = ebs[i];
+        if(this.shields.shieldHitAndDamage(b.x,b.y,s.BW,s.BH)) this.pj.enemyBullets.releaseAt(i);
+      }
+
+      // 敵が自機に体当たり
+      if(!s.over){
+        const pl = s.px - s.shipW/2;
+        const pt = s.playerTopY();
+
+        const aliveIds = s.aliveIds;
+        for(let i=0;i<aliveIds.length;i++){
+          const id = aliveIds[i];
+          const r = (id / s.cols) | 0;
+          const c = id - r*s.cols;
+          const ex = s.fx + c*fm.stepX;
+          const ey = s.fy + r*fm.stepY;
+          if(aabb(ex,ey,s.enemyW,s.enemyH, pl,pt,s.shipW,s.shipH)){
+            s.fy = pt - (r * fm.stepY + s.enemyH);
+            this.triggerRamming(s.fy);
+            return;
+          }
+        }
+      }
+
+      // 自弾 vs 敵
+      for(let i=pbs.length-1;i>=0;i--){
+        const b = pbs[i];
+        const c = Math.floor((b.x - s.fx)/fm.stepX);
+        const r = Math.floor((b.y - s.fy)/fm.stepY);
+        if(r>=0 && r<s.rows && c>=0 && c<s.cols && s.hpGrid[r][c] > 0){
+          const ex = s.fx + c*fm.stepX;
+          const ey = s.fy + r*fm.stepY;
+          if(aabb(b.x,b.y,s.BW,s.BH, ex,ey, s.enemyW,s.enemyH)){
+            this.pj.playerBullets.releaseAt(i);
+
+            s.hpGrid[r][c]--;
+            this.pj.boom(ex+s.enemyW/2, ey+s.enemyH/2);
+
+            if(s.hpGrid[r][c] <= 0){
+              this.enemies.onEnemyDamagedOrKilled(r,c);
+              s.score += s.rowKillScore(r);
+              scoreEl.textContent = s.score;
+
+              if(this.enemies.countAlive()===0 && !s.over && !s.clearing){
+                this.nextWave();
+                return;
+              }
+            }
+          }
+        }
+      }
+
+      // 敵弾 vs 自機
+      if(!s.over){
+        const pl = s.px - s.shipW/2;
+        const pt = s.playerTopY();
+        for(let i=ebs.length-1;i>=0;i--){
+          const b = ebs[i];
+          if(aabb(b.x,b.y,s.BW,s.BH, pl,pt, s.shipW,s.shipH)){
+            this.pj.enemyBullets.releaseAt(i);
+            if(s.invincible===0 && s.safeTimer===0){
+              s.life--;
+              s.updateLifeHud();
+              this.pj.boom(s.px, pt+s.shipH/2);
+              s.invincible = CONFIG.player.invincibleFrames;
+              if(s.life<=0) this.gameOver();
+            }
+          }
+        }
+      }
+    }
+  }
+
+  class GameLogic {
+    constructor(state, enemies, shields, projectiles, collisions){
+      this.s = state;
+      this.enemies = enemies;
+      this.shields = shields;
+      this.pj = projectiles;
+      this.col = collisions;
+    }
+
+    setPaused(next){
+      const s = this.s;
+      if(s.over) return;
+      s.paused = !!next;
+      pauseBtn.textContent = s.paused ? "RESUME" : "PAUSE";
+      pauseBtn.setAttribute("aria-pressed", s.paused ? "true" : "false");
+      if(s.paused){
+        this._msgBeforePause = msgEl.innerHTML;
+        msgEl.textContent = "PAUSED";
+        msgEl.style.pointerEvents = "none";
+        s.holdL = false; s.holdR = false;
+        Input.stickReset();
+      }else{
+        if(this._msgBeforePause && this._msgBeforePause !== "PAUSED") msgEl.innerHTML = this._msgBeforePause;
+        else msgEl.textContent = "";
+        // Re-enable hint tapping only if we restored GAME OVER message
+        msgEl.style.pointerEvents = "none";
+        this._msgBeforePause = "";
+      }
+    }
+    togglePause(){ this.setPaused(!this.s.paused); }
+
+    reset(){
+      const s = this.s;
+
+      s.clearAllTimers();
+
+      this.pj.clearAll();
+      s.shieldContactTick = 0;
+
+      msgEl.textContent = "";
+      s.score = 0;
+      s.wave = 1;
+      s.life = 3;
+
+      s.invincible = 0;
+      s.safeTimer = 0;
+
+      // ★追加：クールダウン初期化
+      s.shootCd = 0;
+
+      s.over = false;
+      s.clearing = false;
+
+      s.paused = false;
+      pauseBtn.textContent = "PAUSE";
+      pauseBtn.setAttribute("aria-pressed", "false");
+      this._msgBeforePause = "";
+      s.holdL = false; s.holdR = false;
+
+      scoreEl.textContent = "0";
+      waveEl.textContent = "1";
+      s.updateLifeHud();
+
+      s.px = s.w/2;
+      s.clampPlayer();
+
+      this.enemies.spawnEnemies();
+      this.shields.spawnShields();
+      this.col.showReady();
+    }
+
+    update(T, fm){
+      const s = this.s;
+      if(s.paused) return;
+
+      if(s.hitStop > 0){
+        s.hitStop -= T.ms;
+        return;
+      }
+
+      // ★追加：射撃クールダウンを減算
+      if(s.shootCd > 0) s.shootCd = Math.max(0, s.shootCd - T.ms);
+
+      for(const st of s.stars){
+        st.y += st.s * T.f;
+        if(st.y > s.h){
+          st.y = 0;
+          st.x = Math.random() * s.w;
+        }
+      }
+
+      if(s.invincible > 0) s.invincible--;
+      if(s.safeTimer > 0) s.safeTimer--;
+
+      const sp = s.isMobile ? CONFIG.player.speedMobile : CONFIG.player.speedPC;
+      if(!s.ready && !s.clearing && !s.over){
+        if(s.holdL) s.px -= sp;
+        if(s.holdR) s.px += sp;
+      }
+      s.clampPlayer();
+
+      s.prevFx = s.fx;
+      s.prevFy = s.fy;
+
+
+      const remaining = Math.max(1, this.enemies.countAlive());
+      const initialCount = s.enemyInitialCount || remaining;
+      const ratio = remaining / initialCount;
+
+      const st = this.enemies.getAliveStats();
+      const minAliveC = st.minC;
+      const maxAliveC = st.maxC;
+      const maxAliveR = st.maxR;
+
+      const e = CONFIG.enemy;
+
+      const t = 1 - ratio;
+      const curve = Math.pow(t, e.moveCurvePow);
+      let moveInterval = e.moveBaseInterval * (1 - curve) + e.moveMinInterval * curve;
+
+      const waveSpeedMul = 1 / (1 + (s.wave - 1) * e.waveSpeedMulK);
+      moveInterval *= waveSpeedMul;
+
+      if (remaining === 1) moveInterval = Math.max(moveInterval, e.moveLastOneCap);
+      moveInterval = Math.max(10, moveInterval);
+
+      let stepMoveX = e.stepMoveXBaseMulU*s.U*(1+(s.wave-1)*e.stepMoveXWaveK);
+      if(remaining === 1) stepMoveX *= e.stepMoveXLastOneMul;
+
+      const stepDown  = e.stepDownMulU*s.U;
+
+      if(!s.ready && !s.clearing && !s.over){
+        s.moveAcc += T.ms;
+        if(s.wallPause > 0){
+          const use = Math.min(s.wallPause, s.moveAcc);
+          s.wallPause -= use;
+          s.moveAcc -= use;
+        }
+        while(s.moveAcc >= moveInterval){
+          s.moveAcc -= moveInterval;
+
+          const nextFx = s.fx + s.dir * stepMoveX;
+
+          const nextAliveLeft  = nextFx + minAliveC * fm.stepX;
+          const nextAliveRight = nextFx + maxAliveC * fm.stepX + s.enemyW;
+
+          if (nextAliveRight > s.w - e.wallMargin) {
+            const overflow = nextAliveRight - (s.w - e.wallMargin);
+            s.fx = nextFx - overflow;
+            s.dir = -1;
+            s.fy += stepDown;
+
+            const playerTop = s.playerTopY();
+            const lowestBottom = s.fy + maxAliveR * fm.stepY + s.enemyH;
+            if (lowestBottom >= playerTop) {
+              s.fy = playerTop - (maxAliveR * fm.stepY + s.enemyH);
+              this.col.triggerRamming(s.fy);
+              return;
+            }
+
+            s.wallPause = e.wallPauseMs;
+            s.moveAcc = 0;
+            break;
+
+          } else if (nextAliveLeft < e.wallMargin) {
+            const overflow = e.wallMargin - nextAliveLeft;
+            s.fx = nextFx + overflow;
+            s.dir = 1;
+            s.fy += stepDown;
+
+            const playerTop = s.playerTopY();
+            const lowestBottom = s.fy + maxAliveR * fm.stepY + s.enemyH;
+            if (lowestBottom >= playerTop) {
+              s.fy = playerTop - (maxAliveR * fm.stepY + s.enemyH);
+              this.col.triggerRamming(s.fy);
+              return;
+            }
+
+            s.wallPause = e.wallPauseMs;
+            s.moveAcc = 0;
+            break;
+
+          } else {
+            s.fx = nextFx;
+          }
+        }
+      }
+
+      this.enemies.updateAnim();
+
+      if(!s.ready && !s.clearing && !s.over){
+        const prof = s.enemyProfile();
+        s.enemyShootTick++;
+        if(s.enemyShootTick >= prof.fireInterval){
+          s.enemyShootTick = 0;
+          this.pj.enemyShoot(fm);
+        }
+      }
+
+      this.pj.update(T);
+    }
+  }
+
+  class Renderer {
+    constructor(state, projectiles){
+      this.s = state;
+      this.pj = projectiles;
+    }
+    render(fm){
+      const s = this.s;
+      const W = s.w, H = s.h;
+
+      ctx.fillStyle="#000";
+      ctx.fillRect(0,0,W,H);
+
+      ctx.fillStyle="#fff";
+      for(const st of s.stars) ctx.fillRect(st.x,st.y,2,2);
+
+      const sc = s.colors.shield();
+      for(const sh of s.shields){
+        ctx.fillStyle = sc;
+        for(let r=0;r<sh.h;r++){
+          for(let c=0;c<sh.w;c++){
+            if(sh.bits[r][c]) ctx.fillRect(sh.x + c*s.U, sh.y + r*s.U, s.U, s.U);
+          }
+        }
+      }
+
+      const enemyScale = Math.max(1, Math.round(s.enemyW/7));
+      for(let r=0;r<s.rows;r++){
+        for(let c=0;c<s.cols;c++){
+          if(s.hpGrid[r][c] <= 0) continue;
+          const type = ENEMY_TYPES[r % ENEMY_TYPES.length];
+          const bmp = s.enemyFrame ? type.b : type.a;
+          const color = s.colors.row[r % s.colors.row.length];
+          const x = s.fx + c*fm.stepX;
+          const y = s.fy + r*fm.stepY;
+          drawBitmap(bmp, x, y, enemyScale, color);
+
+          if(s.hpGrid[r][c] >= 2){
+            ctx.fillStyle="rgba(255,255,255,.65)";
+            ctx.fillRect(x, y-3, Math.max(10, s.enemyW*0.30), 2);
+          }
+        }
+      }
+
+      drawBitmap(SHIP, s.px - s.shipW/2, s.playerTopY(), s.U, s.colors.player());
+
+      ctx.fillStyle="cyan";
+      for(const b of this.pj.playerBullets.active) ctx.fillRect(b.x,b.y,s.BW,s.BH);
+
+      ctx.fillStyle="orange";
+      for(const b of this.pj.enemyBullets.active) ctx.fillRect(b.x,b.y,s.BW,s.BH);
+
+      ctx.fillStyle="orange";
+      for(const p of this.pj.booms.active) ctx.fillRect(p.x,p.y,4,4);
+
+      if(s.paused){
+        ctx.fillStyle="rgba(0,0,0,.25)";
+        ctx.fillRect(0,0,W,H);
+      }
+    }
+  }
+
+  state = new GameState();
+  const enemies = new EnemySystem(state);
+  const shields = new ShieldSystem(state);
+
+  let projectiles, collisions, logic, renderer;
+
+  const Input = {
+    stick: { baseCx:0, baseCy:0, radius:52, dx:0, knobW:74, knobH:74 },
+    stickTouchActive:false,
+    stickPointerId:null,
+    stickGeomDirty:true,
+
+    applyMobileControlSizes(){
+      if(!state.isMobile) return;
+      const sw = (typeof screen!=="undefined" && screen.width) ? screen.width : state.w;
+      const sh = (typeof screen!=="undefined" && screen.height) ? screen.height : state.h;
+      const m = Math.min(sw, sh);
+      const clampInt = (v,a,b)=>Math.max(a, Math.min(b, v|0));
+
+      const margin = clampInt(Math.round(m*0.035), 16, 28);
+      const base = clampInt(Math.round(m*0.22), 110, 170);
+      const knob = clampInt(Math.round(base*0.52), 60, 92);
+      const shoot = clampInt(Math.round(m*0.20), 100, 150);
+
+      stickBase.style.width = stickBase.style.height = base + "px";
+      stickKnob.style.width = stickKnob.style.height = knob + "px";
+      shootBtn.style.width = shootBtn.style.height = shoot + "px";
+
+      stickBase.style.left = margin + "px";
+      stickBase.style.bottom = margin + "px";
+      stickKnob.style.left = margin + "px";
+      stickKnob.style.bottom = margin + "px";
+
+      shootBtn.style.right = margin + "px";
+      shootBtn.style.bottom = (margin + 6) + "px";
+
+      // label position
+      shootLabel.style.right = margin + "px";
+      shootLabel.style.bottom = (margin + shoot + 18) + "px";
+
+      this.stickGeomDirty = true;
+    },
+
+    updateStickGeometry(){
+      if(!this.stickGeomDirty) return;
+      const br = stickBase.getBoundingClientRect();
+      const kr = stickKnob.getBoundingClientRect();
+      this.stick.baseCx = br.left + br.width/2;
+      this.stick.baseCy = br.top  + br.height/2;
+      this.stick.knobW = kr.width || 74;
+      this.stick.knobH = kr.height || 74;
+      // knob center can move inside base
+      const radius = (br.width/2) - (this.stick.knobW/2);
+      this.stick.radius = Math.max(18, radius);
+      this.stickGeomDirty = false;
+    },
+
+    setKnobPos(x,y){
+      const w = this.stick.knobW || 74;
+      const h = this.stick.knobH || 74;
+      stickKnob.style.left = (x - w/2) + "px";
+      stickKnob.style.top  = (y - h/2) + "px";
+    },
+
+    applyStick(){
+      const dead = 0.18;
+      if(Math.abs(this.stick.dx) < dead){
+        state.holdL = false; state.holdR = false;
+        return;
+      }
+      if(this.stick.dx < 0){
+        state.holdL = true; state.holdR = false;
+      }else{
+        state.holdR = true; state.holdL = false;
+      }
+    },
+
+    stickReset(){
+      this.stickTouchActive = false;
+      this.stickPointerId = null;
+      this.stick.dx = 0;
+      state.holdL = false;
+      state.holdR = false;
+
+      // NOTE: Do not resize mobile controls here.
+      // Resizing is handled only on viewport changes (resize / breakpoint change),
+      // so the joystick + shot button don't "snap" size after first interaction.
+      this.updateStickGeometry(); // reads rect only when dirty
+      this.setKnobPos(this.stick.baseCx, this.stick.baseCy);
+    },
+
+    stickMoveTouch(t){
+      const vx = t.clientX - this.stick.baseCx;
+      const max = this.stick.radius;
+      const cl = Math.min(Math.abs(vx), max);
+      const dx = vx < 0 ? -cl : cl;
+
+      this.setKnobPos(this.stick.baseCx + dx, this.stick.baseCy);
+      this.stick.dx = clamp(vx / max, -1, 1);
+      this.applyStick();
+    },
+
+    updateControlsVisibility(){
+      controls.style.display = state.isMobile ? "block" : "none";
+      this.applyMobileControlSizes();
+      this.stickGeomDirty = true;
+      this.updateStickGeometry();
+      this.setKnobPos(this.stick.baseCx, this.stick.baseCy);
+    }
+  };
+
+  function rebuildSystems(){
+    projectiles = new ProjectileSystem(state, enemies, shields);
+    collisions  = new CollisionSystem(state, enemies, shields, projectiles);
+    logic       = new GameLogic(state, enemies, shields, projectiles, collisions);
+    renderer    = new Renderer(state, projectiles);
+  }
+
+  pauseBtn.addEventListener("click", (e)=>{
+    e.preventDefault();
+    logic.togglePause();
+  }, {passive:false});
+
+  addEventListener("keydown",(e)=>{
+    if(e.key==="p"||e.key==="P"||e.key==="Escape"){
+      logic.togglePause();
+      return;
+    }
+    if(state.paused) return;
+
+    if(state.over){
+      logic.reset();
+      return;
+    }
+
+    if(e.code==="ArrowLeft") state.holdL=true;
+    if(e.code==="ArrowRight") state.holdR=true;
+
+    // キーボード側もクールダウンで制限されます（shootPlayerOnce 内）
+    if(e.code==="KeyA"){
+      projectiles.shootPlayerOnce();
+    }
+  });
+
+  addEventListener("keyup",(e)=>{
+    if(state.paused) return;
+    if(e.code==="ArrowLeft") state.holdL=false;
+    if(e.code==="ArrowRight") state.holdR=false;
+  });
+
+  // Restart: GAME OVER中はどこを押しても再開（モバイル/PC共通）
+  const restartAny = (e) => {
+    if(!state.over || state.paused) return;
+    logic.reset();
+    if(e && e.preventDefault) e.preventDefault();
+    if(e && e.stopPropagation) e.stopPropagation();
+  };
+
+  if("PointerEvent" in window){
+    document.addEventListener("pointerdown", restartAny, {passive:false});
+  }else{
+    document.addEventListener("mousedown", restartAny, {passive:false});
+    document.addEventListener("touchstart", restartAny, {passive:false});
+  }
+
+  // Shoot (mobile button)
+  const shootOnce = (e) => {
+    if(state.paused) return;
+    if(state.over){ logic.reset(); e.preventDefault(); e.stopPropagation(); return; }
+    if(!state.isMobile) return;
+
+    shootBtn.blur();
+    if(document.activeElement) document.activeElement.blur();
+
+    projectiles.shootPlayerOnce(); // クールダウンで制限
+
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  // Stick controls: prefer Pointer Events, fallback to Touch Events
+  if("PointerEvent" in window){
+    const onStickPointerDown = (e) => {
+      if(!state.isMobile || state.paused || state.over) return;
+      if(e.button != null && e.button !== 0) return;
+
+      Input.stickTouchActive = true;
+      Input.stickPointerId = e.pointerId;
+
+      Input.updateStickGeometry(); // dirty の時だけ rect を取得
+      try{ e.target.setPointerCapture(e.pointerId); }catch(_){}
+      Input.stickMoveTouch(e);
+
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    stickBase.addEventListener("pointerdown", onStickPointerDown, {passive:false});
+    stickKnob.addEventListener("pointerdown", onStickPointerDown, {passive:false});
+
+    window.addEventListener("pointermove", (e)=>{
+      if(!Input.stickTouchActive || state.paused) return;
+      if(Input.stickPointerId != null && e.pointerId !== Input.stickPointerId) return;
+      Input.stickMoveTouch(e);
+      e.preventDefault();
+      e.stopPropagation();
+    }, {passive:false});
+
+    const endStickPointer = (e) => {
+      if(!Input.stickTouchActive) return;
+      if(Input.stickPointerId != null && e.pointerId !== Input.stickPointerId) return;
+      Input.stickReset();
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    window.addEventListener("pointerup", endStickPointer, {passive:false});
+    window.addEventListener("pointercancel", endStickPointer, {passive:false});
+
+    shootBtn.addEventListener("pointerdown", shootOnce, {passive:false});
+    shootBtn.addEventListener("pointerup", (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
+    shootBtn.addEventListener("pointercancel", (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
+
+  }else{
+    // Touch fallback
+    ["touchstart","touchmove","touchend"].forEach(t=>{
+      document.addEventListener(t, e=>{
+        if(e.target && e.target.id === "shootBtn") e.preventDefault();
+      }, {passive:false});
+    });
+
+    const onStickStart = (e) => {
+      if(!state.isMobile || state.paused || state.over) return;
+      Input.stickTouchActive = true;
+      Input.updateStickGeometry();
+      if(e.touches && e.touches[0]) Input.stickMoveTouch(e.touches[0]);
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    stickBase.addEventListener("touchstart", onStickStart, {passive:false});
+    stickKnob.addEventListener("touchstart", onStickStart, {passive:false});
+
+    window.addEventListener("touchmove",(e)=>{
+      if(!Input.stickTouchActive || state.paused) return;
+      if(e.touches && e.touches[0]) Input.stickMoveTouch(e.touches[0]);
+      e.preventDefault();
+      e.stopPropagation();
+    }, {passive:false});
+
+    const endStickTouch = (e) => {
+      if(!Input.stickTouchActive) return;
+      Input.stickReset();
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    window.addEventListener("touchend", endStickTouch, {passive:false});
+    window.addEventListener("touchcancel", endStickTouch, {passive:false});
+
+    shootBtn.addEventListener("touchstart", shootOnce, {passive:false});
+    shootBtn.addEventListener("touchend", (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
+    shootBtn.addEventListener("touchcancel", (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
+  }
+  let resizeQueued=false;
+  addEventListener("resize",()=>{
+    if(resizeQueued) return;
+    resizeQueued=true;
+    requestAnimationFrame(()=>{
+      resizeQueued=false;
+
+      resizeCanvas();
+
+      const oldIsMobile = state.isMobile;
+      state.U = calcU();
+      state.isMobile = isCoarse();
+      const bpChanged = (oldIsMobile !== state.isMobile);
+
+      state.recalcSizes();
+      state.resetStars();
+      state.clampPlayer();
+      Input.updateControlsVisibility();
+
+      if(bpChanged){
+        logic.reset();
+        return;
+      }
+
+      shields.relayoutShields();
+
+      const fm = state.getFM();
+      // Keep formation on-screen after resize (avoid NaN / too-low spawn)
+      state.fx = safeNum((state.w - fm.totalW)/2, 0);
+
+      const formationH = (state.rows-1) * fm.stepY + state.enemyH;
+      const maxFy = Math.max(0, state.playerTopY() - formationH - 6);
+      const baseFy = safeNum(fm.baseY, 0);
+      state.fy = clamp(baseFy, 0, maxFy);
+
+      if(state.paused) Input.stickReset();
+    });
+  });
+
+  function loop(){
+    const now = performance.now();
+    const dtMs = Math.min(34, now - (loop._last || now));
+    loop._last = now;
+
+    const dtSec = dtMs / 1000;
+    const T = { ms: dtMs, sec: dtSec, f: dtSec * 60 };
+
+        try{
+      const fm = state.getFM();
+      
+          logic.update(T, fm);
+          collisions.detect(fm);
+          renderer.render(fm);
+    }catch(err){
+      console.error(err);
+      // Fail-safe: show error and allow tap-to-restart
+      state.over = true;
+      state.paused = false;
+      msgEl.innerHTML = 'ERROR<br><span id="restartHint">TAP / CLICK / ENTER</span>';
+      msgEl.style.pointerEvents = "none";
+    }
+
+    requestAnimationFrame(loop);
+  }
+  // prevent long-press selection / context menu on mobile
+  document.addEventListener('contextmenu', (e)=>{ e.preventDefault(); }, {passive:false});
+  document.addEventListener('selectstart', (e)=>{ e.preventDefault(); }, {passive:false});
+  document.addEventListener('dragstart', (e)=>{ e.preventDefault(); }, {passive:false});
+  window.addEventListener('gesturestart', (e)=>{ e.preventDefault(); }, {passive:false});
+
+  // boot
+  resizeCanvas();
+  // initialize sizing + mobile controls before first interaction (prevents "first touch" snap)
+  state.U = calcU();
+  state.isMobile = isCoarse();
+  state.recalcSizes();
+  state.resetStars();
+  state.clampPlayer();
+  Input.updateControlsVisibility();
+
+  rebuildSystems();
+  logic.reset();
+  loop();
+
+})();
+</script>
+</body>
+</html>
