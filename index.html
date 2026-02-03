@@ -1,1373 +1,1978 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Typing Pet - Travel Only + 10k (Typewriter Only)</title>
-  <style>
-    :root{
-      --bg:#0b1020;
-      --text:#eaf0ff;
-      --muted:#a8b3d6;
-      --accent:#7bf0ff;
-      --accent2:#b5ff7b;
-      --danger:#ff6b8b;
-      --ok:#b5ff7b;
-      --bad:#ff6b8b;
-      --line:rgba(255,255,255,.10);
-      --shadow: 0 18px 60px rgba(0,0,0,.45);
-      --radius: 18px;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      font-family: var(--sans);
-      background:
-        radial-gradient(1200px 800px at 20% 10%, rgba(123,240,255,.16), transparent 60%),
-        radial-gradient(1000px 700px at 80% 30%, rgba(181,255,123,.12), transparent 60%),
-        radial-gradient(900px 700px at 50% 100%, rgba(255,107,139,.10), transparent 65%),
-        linear-gradient(180deg, #070a14, var(--bg));
-      color: var(--text);
-      overflow-x:hidden;
-    }
-    .wrap{max-width:1100px;margin:0 auto;padding:22px 16px 40px;}
-    header{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;padding:10px 4px 18px;}
-    h1{margin:0;font-size:clamp(20px,2.6vw,32px);letter-spacing:.3px;line-height:1.15;}
-    .sub{margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.45;}
-    .pillRow{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-    .pill{
-      padding:8px 10px;border:1px solid var(--line);
-      background:rgba(16,26,51,.55);border-radius:999px;font-size:12px;color:var(--muted);
-      display:flex;align-items:center;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,.20);
-      backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);user-select:none;
-    }
-    .dot{
-      width:10px;height:10px;border-radius:50%;
-      background:rgba(123,240,255,.65);
-      box-shadow:0 0 0 3px rgba(123,240,255,.12),0 0 24px rgba(123,240,255,.45);
-    }
-    .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;}
-    @media (max-width:980px){.grid{grid-template-columns:1fr}.pillRow{justify-content:flex-start}}
-    .card{
-      border:1px solid var(--line);
-      background:linear-gradient(180deg, rgba(16,26,51,.85), rgba(14,23,48,.70));
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      overflow:hidden;position:relative;
-    }
-    .card h2{
-      margin:0;padding:14px 16px;font-size:14px;color:var(--muted);letter-spacing:.4px;
-      border-bottom:1px solid var(--line);
-      display:flex;align-items:center;justify-content:space-between;gap:10px;
-    }
-    .card h2 .right{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end;}
-    .btn{
-      appearance:none;border:1px solid rgba(255,255,255,.14);background:rgba(10,16,34,.40);
-      color:var(--text);border-radius:12px;padding:8px 10px;font-size:12px;cursor:pointer;
-      transition:transform .08s ease, background .2s ease, border-color .2s ease;
-      user-select:none;
-    }
-    .btn:hover{background:rgba(10,16,34,.60);border-color:rgba(123,240,255,.35)}
-    .btn:active{transform:translateY(1px)}
-    .btn.primary{border-color:rgba(123,240,255,.35);background:rgba(123,240,255,.10);}
-    .btn.danger{border-color:rgba(255,107,139,.35);background:rgba(255,107,139,.10);}
-    .body{padding:14px 16px 16px;}
-    canvas{
-      width:100%;height:380px;display:block;
-      background:
-        radial-gradient(900px 400px at 50% 20%, rgba(123,240,255,.10), transparent 65%),
-        radial-gradient(600px 300px at 20% 80%, rgba(181,255,123,.08), transparent 60%),
-        linear-gradient(180deg, rgba(7,10,20,.55), rgba(7,10,20,.20));
-      border-bottom:1px solid var(--line);
-    }
-    .petFooter{display:flex;gap:12px;flex-wrap:wrap;padding:12px 16px 16px;align-items:center;justify-content:space-between;}
-    .statLine{display:flex;gap:10px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:12px;}
-    .tag{padding:6px 10px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(0,0,0,.18);color:var(--muted);font-size:12px;}
-    .tag b{color:var(--text);font-weight:600}
-    .meter{height:9px;width:180px;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.20);}
-    .meter>i{display:block;height:100%;width:30%;background:linear-gradient(90deg, rgba(123,240,255,.75), rgba(181,255,123,.70));box-shadow:0 0 24px rgba(123,240,255,.35);}
+<meta charset="UTF-8" />
+<meta name="viewport"
+  content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Invader Stable v8.5.6a (Stabilized)</title>
+<style>
+  html,body{
+    margin:0;padding:0;background:#000;overflow:hidden;
+    touch-action:none;
+    overscroll-behavior:none;
+    -webkit-overflow-scrolling:auto;
+    -webkit-text-size-adjust:100%;
+    /* prevent long-press text selection / callout */
+    -webkit-user-select:none;
+    user-select:none;
+    -webkit-touch-callout:none;
+    -webkit-user-drag:none;
+  }
+  canvas{position:fixed;inset:0;display:block;touch-action:none;pointer-events:auto}
 
-    .typingBox{display:flex;flex-direction:column;gap:12px;}
-    .prompt{
-      padding:12px 12px;border:1px dashed rgba(255,255,255,.14);border-radius:14px;background:rgba(0,0,0,.16);
-      line-height:1.8;font-size:14px;
-    }
+  /* also disable selection on UI elements */
+  #msg,.controls,button{
+    -webkit-user-select:none;
+    user-select:none;
+    -webkit-touch-callout:none;
+    -webkit-user-drag:none;
+  }
 
-    .promptLine{
-      font-family:var(--mono);
-      font-size:15px;
-      letter-spacing:.2px;
-      word-break:break-word;
-      white-space:pre-wrap;
-    }
-    .ch{
-      display:inline-block;
-      padding:0 0.5px;
-      border-radius:6px;
-      transition:background .08s ease, color .08s ease, box-shadow .08s ease;
-    }
-    .todo{ color: rgba(234,240,255,.55); }
-    .ok{
-      color: rgba(181,255,123,.95);
-      text-shadow: 0 0 18px rgba(181,255,123,.18);
-    }
-    .bad{
-      color: rgba(255,107,139,.95);
-      background: rgba(255,107,139,.10);
-      box-shadow: 0 0 0 1px rgba(255,107,139,.22) inset;
-    }
-    .caret{ position:relative; }
-    .caret::after{
-      content:"";
-      position:absolute;
-      left:-1px;
-      bottom:-2px;
-      width:2px;
-      height:1.25em;
-      background: rgba(123,240,255,.75);
-      border-radius:2px;
-      box-shadow: 0 0 18px rgba(123,240,255,.35);
-      animation: blink 1s step-end infinite;
-    }
-    @keyframes blink { 50% { opacity: 0; } }
+  #hud{
+    position:fixed;top:8px;left:8px;z-index:10;color:#fff;
+    font:14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    user-select:none;pointer-events:none;
+  }
 
-    .inputRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-    input[type="text"]{
-      flex:1;min-width:220px;padding:12px 12px;border-radius:14px;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(10,16,34,.45);color:var(--text);outline:none;font-family:var(--mono);
-      font-size:14px;letter-spacing:.2px;
-      ime-mode: disabled; /* 効かない場合あり */
-    }
-    input[type="text"]:focus{border-color:rgba(123,240,255,.45);box-shadow:0 0 0 3px rgba(123,240,255,.12);}
-    .mini{color:var(--muted);font-size:12px;line-height:1.5;}
-    .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-    @media (max-width:520px){.cols{grid-template-columns:1fr}.meter{width:140px;}}
-    .kv{border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(0,0,0,.14);}
-    .kv .k{color:var(--muted);font-size:12px}
-    .kv .v{margin-top:6px;font-size:16px;font-weight:700}
-    .log{height:220px;overflow:auto;padding-right:6px;}
-    .logItem{padding:10px 10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(0,0,0,.14);margin-bottom:10px;font-size:13px;line-height:1.5;}
-    .logItem .t{color:var(--muted);font-size:11px;margin-bottom:4px}
-    .logItem.good{border-color:rgba(181,255,123,.20)}
-    .logItem.bad{border-color:rgba(255,107,139,.22)}
-    .logItem.info{border-color:rgba(123,240,255,.20)}
-    footer{margin-top:14px;color:rgba(255,255,255,.52);font-size:12px;padding:12px 4px;}
+  #pauseBtn{
+    position:fixed;top:10px;right:10px;z-index:80;
+    padding:8px 12px;font:700 14px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    color:#fff;background:rgba(0,0,0,.55);
+    border:2px solid rgba(255,255,255,.25);border-radius:10px;
+    cursor:pointer;pointer-events:auto;user-select:none;
+    touch-action:manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
 
-    .toast{
-      position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
-      background:rgba(10,16,34,.88);border:1px solid rgba(255,255,255,.16);
-      border-radius:999px;padding:10px 14px;color:var(--text);font-size:12px;
-      box-shadow:0 20px 70px rgba(0,0,0,.50);
-      opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;
-      z-index:9999;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);white-space:nowrap;
-    }
-    .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
-    .kbd{font-family:var(--mono);border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);padding:2px 6px;border-radius:8px;font-size:12px;color:var(--text);}
+  #msg{
+    position:fixed;inset:0;display:flex;align-items:flex-start;justify-content:center;
+    padding-top:clamp(24px,10vh,140px);
+    box-sizing:border-box;
+    color:#fff;font:700 40px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    text-shadow:0 2px 0 rgba(0,0,0,.5);
+    z-index:40;pointer-events:none;text-align:center;white-space:pre-line;
+  }
 
-    .shake{animation: shake .18s linear 1;}
-    @keyframes shake{
-      0%{transform:translateX(0)}
-      25%{transform:translateX(-2px)}
-      50%{transform:translateX(2px)}
-      75%{transform:translateX(-1px)}
-      100%{transform:translateX(0)}
-    }
-  </style>
+  #restartHint{
+    display:inline-block;
+    margin-top:14px;
+    padding:10px 14px;
+    font-size:24px;
+    font-weight:700;
+    letter-spacing:0.02em;
+    opacity:0.9;
+    cursor:pointer;
+    pointer-events:auto;
+    text-decoration:none;
+    touch-action:manipulation;
+  }
+  #restartHint:active{ opacity:0.6; }
+
+  /* ===== Mobile controls ===== */
+  .controls{position:fixed;inset:0;z-index:70;pointer-events:none}
+
+  #stickBase,#stickKnob{
+    position:fixed;border-radius:50%;
+    pointer-events:auto;
+    touch-action:none !important;
+    user-select:none;
+    -webkit-user-select:none;
+    -webkit-touch-callout:none;
+    -webkit-tap-highlight-color: transparent;
+    transform: translateZ(0);
+  }
+  #stickBase{
+    width:140px;height:140px;left:22px;bottom:22px;
+    background:rgba(40,40,40,.55);
+    border:2px solid rgba(255,255,255,.25);
+  }
+  #stickKnob{
+    width:74px;height:74px;left:22px;bottom:22px;
+    background:rgba(0,0,0,.65);
+    border:2px solid rgba(255,255,255,.20);
+  }
+
+  #shootBtn{
+    position:fixed;width:120px;height:120px;
+    right:22px;bottom:28px;border-radius:50%;
+    pointer-events:auto;
+    touch-action:none !important;
+    -webkit-touch-callout:none;
+    -webkit-user-select:none;
+    user-select:none;
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+    transform: translateZ(0);
+    -webkit-appearance:none;
+    appearance:none;
+    outline:none;
+
+    background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.35),rgba(255,0,0,.9));
+    border:2px solid rgba(255,255,255,.25);
+  }
+  #shootLabel{
+    position:fixed;right:22px;bottom:160px;
+    color:#fff;font:800 14px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    padding:6px 10px;border:2px solid rgba(255,255,255,.25);
+    border-radius:10px;background:rgba(0,0,0,.45);pointer-events:none;
+  }
+
+  @media (pointer: fine) {
+    .controls{display:none;}
+  }
+
+  button:focus-visible{
+    outline:2px solid #fff;
+    outline-offset:3px;
+  }
+
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <div>
-        <h1>Typing Pet 🧫 謎の生物を育てる <span style="opacity:.7;font-size:.7em">(Travel + 10k / Typewriter)</span></h1>
-        <p class="sub">
-          旅行予約・変更・キャンセルで使える英語を練習。<span class="kbd">Enter</span>で判定。<span class="kbd">Esc</span>で入力リセット。
-        </p>
-      </div>
-      <div class="pillRow">
-        <div class="pill"><span class="dot"></span><span id="statusPill">idle</span></div>
-        <div class="pill">Theme: travel</div>
-        <div class="pill">Prompts: 10,000 (no-repeat)</div>
-        <div class="pill">Sound: typewriter only</div>
-      </div>
-    </header>
+<canvas id="cv"></canvas>
 
-    <div class="grid">
-      <!-- LEFT: PET -->
-      <section class="card">
-        <h2>
-          <span>生物観察</span>
-          <span class="right">
-            <button class="btn primary" id="btnSnapshot">PNG保存</button>
-            <button class="btn" id="btnShare">シェア文コピー</button>
-            <button class="btn danger" id="btnReset">初期化</button>
-          </span>
-        </h2>
-        <canvas id="cv" width="980" height="420"></canvas>
-        <div class="petFooter">
-          <div class="statLine">
-            <span class="tag">Name: <b id="petName"></b></span>
-            <span class="tag">Stage: <b id="petStage"></b></span>
-            <span class="tag">Mood: <b id="petMood"></b></span>
-          </div>
-          <div class="statLine">
-            <span class="tag">Energy</span>
-            <span class="meter"><i id="energyBar"></i></span>
-            <span class="tag">Lv <b id="petLv"></b></span>
-          </div>
-        </div>
-      </section>
+<div id="hud">
+  SCORE <span id="score">0</span> /
+  WAVE <span id="wave">1</span><br>
+  LIFE <span id="life">❤️❤️❤️</span>
+</div>
 
-      <!-- RIGHT: GAME -->
-      <section class="card">
-        <h2>
-          <span>育成タイピング</span>
-          <span class="right">
-            <button class="btn" id="btnNewPrompt">お題を変える</button>
-          </span>
-        </h2>
-        <div class="body typingBox">
-          <div class="prompt" id="promptBox">
-            <div id="promptText" class="promptLine"></div>
-            <div class="mini" style="margin-top:8px">
-              ※ ブラウザからIMEを強制的に半角英数へ切替はできません。日本語入力が有効な場合は英数に切り替えてください（検知して注意表示します）。
-            </div>
-            <div class="mini" style="margin-top:6px">
-              ※ iPhone等では最初の操作が必要です。音が出ないときは入力欄を一度タップしてからタイプしてください。
-            </div>
-          </div>
+<button id="pauseBtn" type="button" aria-label="pause" aria-pressed="false">PAUSE</button>
+<div id="msg"></div>
 
-          <div class="inputRow">
-            <input id="typeInput"
-                   type="text"
-                   autocomplete="off"
-                   autocapitalize="none"
-                   autocorrect="off"
-                   spellcheck="false"
-                   inputmode="latin"
-                   lang="en"
-                   placeholder="上の英文をそのまま入力して Enter…" />
-            <button class="btn primary" id="btnSubmit">Enter判定</button>
-          </div>
-
-          <div class="cols">
-            <div class="kv">
-              <div class="k">WPM (直近)</div>
-              <div class="v"><span id="wpmNow">-</span></div>
-              <div class="mini">速いほど活発に。遅いと眠くなる。</div>
-            </div>
-            <div class="kv">
-              <div class="k">Accuracy (直近)</div>
-              <div class="v"><span id="accNow">-</span>%</div>
-              <div class="mini">ミスが多いと尖り、暴れやすい。</div>
-            </div>
-            <div class="kv">
-              <div class="k">Combo</div>
-              <div class="v"><span id="comboNow">0</span></div>
-              <div class="mini">連続成功で急成長。途切れると落ち着く。</div>
-            </div>
-            <div class="kv">
-              <div class="k">Trait</div>
-              <div class="v" id="traitNow">-</div>
-              <div class="mini">あなたの打ち方が性格を作る。</div>
-            </div>
-          </div>
-
-          <div class="kv">
-            <div class="k">育成ログ</div>
-            <div class="log" id="log"></div>
-          </div>
-
-          <div class="mini">
-            IME変換中は挙動が暴れやすいので、変換中（composition中）は色更新とタイプ音を抑制します。
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <footer>
-      旅行予約の文章を中心に10,000パターン（重複なし）。入力ごとに上の英文が1文字ずつ色変化。タイプライター音はWeb Audioで生成。
-    </footer>
-  </div>
-
-  <div class="toast" id="toast">copied</div>
+<div class="controls" id="controls">
+  <div id="stickBase"></div>
+  <div id="stickKnob"></div>
+  <button id="shootBtn" type="button" aria-label="shoot"></button>
+  <div id="shootLabel">SHOT</div>
+</div>
 
 <script>
 (() => {
-  // ---------- Utilities ----------
-  const $ = (sel) => document.querySelector(sel);
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const now = () => Date.now();
-  const fmtTime = (ms) => {
-    const d = new Date(ms);
-    const hh = String(d.getHours()).padStart(2,'0');
-    const mm = String(d.getMinutes()).padStart(2,'0');
-    const ss = String(d.getSeconds()).padStart(2,'0');
-    return `${hh}:${mm}:${ss}`;
-  };
-  const pick = (arr) => arr[(Math.random()*arr.length)|0];
-  const hash32 = (str) => {
-    let h = 2166136261;
-    for (let i=0;i<str.length;i++){
-      h ^= str.charCodeAt(i);
-      h = Math.imul(h, 16777619);
+  "use strict";
+
+  // ===== SANITY CHECK (stabilization) =====
+  // If the file is corrupted, fail fast with a visible message instead of a black screen.
+  const failHard = (msg) => {
+    const el = document.getElementById("msg");
+    if(el){
+      el.style.pointerEvents = "none";
+      el.textContent = msg;
     }
-    return h >>> 0;
-  };
-  const lerp = (a,b,t) => a + (b-a)*t;
-  const escapeHtml = (s) =>
-    String(s).replace(/[&<>"']/g, c => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    }[c]));
-
-  // ---------- Typewriter Sound (Web Audio only) ----------
-  const TypeSound = (() => {
-    let ctx = null;
-    let out = null;
-    let unlocked = false;
-
-    function ensure() {
-      if (!ctx) {
-        ctx = new (window.AudioContext || window.webkitAudioContext)();
-        out = ctx.createGain();
-        out.gain.value = 0.35; // volume
-        out.connect(ctx.destination);
-      }
-    }
-
-    async function unlock() {
-      try {
-        ensure();
-        if (ctx.state === "suspended") await ctx.resume();
-        unlocked = true;
-
-        // iOSでの“初回解放”を確実にするための超小クリック
-        click({ a: 0.00001, t: 0.01, band: 1500, q: 8 });
-      } catch (e) {
-        // ignore
-      }
-    }
-
-    function click({ a = 0.05, t = 0.016, band = 1900, q = 9 } = {}) {
-      if (!unlocked) return;
-      ensure();
-      const sr = ctx.sampleRate;
-      const len = Math.max(32, Math.floor(sr * t));
-      const buf = ctx.createBuffer(1, len, sr);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) {
-        const d = 1 - i / len;
-        data[i] = (Math.random() * 2 - 1) * (d * d);
-      }
-
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-
-      const bp = ctx.createBiquadFilter();
-      bp.type = "bandpass";
-      bp.frequency.value = band;
-      bp.Q.value = q;
-
-      const g = ctx.createGain();
-      const t0 = ctx.currentTime;
-      g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(Math.max(0.0001, a), t0 + 0.003);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + t);
-
-      src.connect(bp);
-      bp.connect(g);
-      g.connect(out);
-
-      src.start(t0);
-      src.stop(t0 + t + 0.02);
-    }
-
-    function type(kind = "char") {
-      if (!unlocked) return;
-
-      if (kind === "backspace") {
-        click({ a: 0.06, t: 0.020, band: 900, q: 6 });
-        setTimeout(() => click({ a: 0.03, t: 0.014, band: 700, q: 6 }), 10);
-        return;
-      }
-      if (kind === "space") {
-        click({ a: 0.05, t: 0.016, band: 1200, q: 7 });
-        return;
-      }
-      // normal
-      click({ a: 0.05, t: 0.014, band: 2000, q: 10 });
-      if (Math.random() < 0.35) setTimeout(() => click({ a: 0.025, t: 0.011, band: 2600, q: 10 }), 8);
-    }
-
-    return { unlock, type };
-  })();
-
-  // ---------- Prompt system (10,000, no repeat until loop) ----------
-  const PROMPT_COUNT = 10000;
-
-  function makeOrder(n, seed){
-    let x = (seed >>> 0) || 123456789;
-    const rnd = () => (x = (x * 1664525 + 1013904223) >>> 0) / 4294967296;
-    const arr = Array.from({length:n}, (_,i)=>i);
-    for(let i=n-1;i>0;i--){
-      const j = (rnd() * (i+1)) | 0;
-      const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
-    }
-    return arr;
-  }
-
-  function ensureOrder(state){
-    state.prompts = state.prompts || {};
-    const bag = state.prompts.travel || (state.prompts.travel = {});
-    if(!bag.order || !Array.isArray(bag.order) || bag.order.length !== PROMPT_COUNT){
-      const seed = (state.seed || 0) ^ hash32(state.name + "::travel");
-      bag.order = makeOrder(PROMPT_COUNT, seed);
-      bag.pos = 0;
-      bag.cycle = 0;
-    }
-    return bag;
-  }
-
-  function nextPromptIndex(state){
-    const bag = ensureOrder(state);
-    const idx = bag.order[bag.pos];
-    bag.pos = (bag.pos + 1) % PROMPT_COUNT;
-    if(bag.pos === 0){
-      bag.cycle = (bag.cycle || 0) + 1;
-      const seed2 = ((state.seed || 0) + (bag.cycle||1)) ^ hash32(state.name + "::travel::cycle");
-      bag.order = makeOrder(PROMPT_COUNT, seed2);
-      bag.pos = 0;
-    }
-    return idx;
-  }
-
-  function mixedRadixPick(i, bases){
-    let x = i;
-    const out = [];
-    for(let k=bases.length-1;k>=0;k--){
-      const b = bases[k];
-      out[k] = x % b;
-      x = (x / b) | 0;
-    }
-    return out;
-  }
-
-  // ---------- Travel prompts (reservation-focused, EN only) ----------
-  const TRAVEL = {
-    OPEN: [
-      "hello,",
-      "hi there,",
-      "good morning,",
-      "good afternoon,",
-      "excuse me,",
-      "i have a question.",
-      "i need help.",
-      "could you help me,",
-      "i would like to check something.",
-      "i am calling about a reservation.",
-      "i am emailing about my booking.",
-      "i need to update my booking."
-    ],
-    INTENT: [
-      "i would like to book",
-      "i would like to reserve",
-      "i need to change",
-      "i need to modify",
-      "i need to cancel",
-      "i would like to confirm",
-      "i would like to rebook",
-      "i need to extend",
-      "i need to shorten",
-      "i need to add",
-      "i need to remove",
-      "i need to correct"
-    ],
-    WHAT: [
-      "a hotel room",
-      "a flight",
-      "a train ticket",
-      "a rental car",
-      "an airport transfer",
-      "a tour",
-      "a reservation",
-      "my booking",
-      "my itinerary",
-      "my seat",
-      "my check-in date",
-      "my guest name"
-    ],
-    DETAILS: [
-      "for one person",
-      "for two people",
-      "for three people",
-      "for two adults and one child",
-      "with breakfast included",
-      "with a non-smoking room",
-      "with a double bed",
-      "with a late check-out",
-      "with free cancellation",
-      "with checked baggage",
-      "with a window seat if possible",
-      "with a child seat",
-      "with an automatic transmission",
-      "with insurance included",
-      "with an ocean view if available",
-      "and i have a confirmation number"
-    ],
-    DATE: [
-      "from march 3 to march 5",
-      "from march 12 to march 14",
-      "from april 1 to april 4",
-      "from april 10 to april 12",
-      "from may 2 to may 6",
-      "from may 18 to may 20",
-      "on june 7",
-      "on june 21",
-      "on july 3",
-      "on july 19",
-      "on august 9",
-      "on september 2",
-      "next monday",
-      "next friday",
-      "this weekend",
-      "tomorrow",
-      "today",
-      "in the evening",
-      "in the morning",
-      "around 3 pm"
-    ],
-    EXTRA: [
-      "could you confirm the total price",
-      "could you confirm the cancellation policy",
-      "could you send me the updated confirmation",
-      "could you tell me what documents i need",
-      "could you check availability",
-      "could you recommend the best option",
-      "could you confirm the check-in time",
-      "could you confirm the baggage allowance",
-      "could you help me change the dates",
-      "could you help me change the name on the reservation",
-      "could you help me add another guest",
-      "could you help me change the payment method",
-      "could you confirm the pickup location",
-      "could you confirm the drop-off time",
-      "could you help me choose seats",
-      "could you tell me if there is an extra fee"
-    ]
+    throw new Error(msg);
   };
 
-  function promptByIndex(i){
-    const bases = [TRAVEL.OPEN.length, TRAVEL.INTENT.length, TRAVEL.WHAT.length, TRAVEL.DETAILS.length, TRAVEL.DATE.length, TRAVEL.EXTRA.length];
-    const [a,b,c,d,e,f] = mixedRadixPick(i, bases);
-    const open = TRAVEL.OPEN[a];
-    const intent = TRAVEL.INTENT[b];
-    const what = TRAVEL.WHAT[c];
-    const details = TRAVEL.DETAILS[d];
-    const date = TRAVEL.DATE[e];
-    const extra = TRAVEL.EXTRA[f];
-    const core = `${intent} ${what} ${details} ${date}.`;
-    return `${open} ${core} ${extra}?`;
-  }
 
-  // ---------- State ----------
-  const STORAGE_KEY = "typing_pet_state_travel_only_typewriter_v1";
+// DOM refs (defined early to avoid TDZ issues in error handlers)
+let scoreEl, waveEl, lifeEl, msgEl, pauseBtn;
 
-  const defaultState = () => ({
-    name: generateName(),
-    createdAt: now(),
-    lastSeen: now(),
-    lv: 1,
-    xp: 0,
-    stage: 0,
-    energy: 0.72,
-    mood: 0.55,
-    glow: 0.45,
-    spikes: 0.25,
-    wobble: 0.35,
-    friendliness: 0.55,
-    trait: "balanced",
-    combo: 0,
-    wpmNow: null,
-    accNow: null,
-    seed: (Math.random()*1e9)|0,
-    log: [],
-    prompts: {},
-    promptIndex: null
+
+  // ===== GLOBAL ERROR GUARD (stabilization) =====
+  // Prevent "black screen" by surfacing errors and allowing recovery.
+  let _recovering = false;
+  const showFatal = (label, err) => {
+    console.error(label, err);
+    try{
+      msgEl.innerHTML = `${label}<br><span id="restartHint">TAP / CLICK / ENTER</span>`;
+      msgEl.style.pointerEvents = "none";
+    }catch(_){}
+    try{
+      state.over = true;
+      state.paused = false;
+      pauseBtn.textContent = "PAUSE";
+      pauseBtn.setAttribute("aria-pressed","false");
+    }catch(_){}
+  };
+
+  const requestRecover = (reason) => {
+    if(_recovering) return;
+    _recovering = true;
+    setTimeout(() => {
+      try{
+        if(typeof logic !== "undefined" && logic && typeof logic.reset === "function"){
+          logic.reset();
+        }
+      }catch(err){
+        showFatal("ERROR", err);
+      }finally{
+        _recovering = false;
+      }
+    }, 0);
+  };
+
+  window.addEventListener("error", (e) => {
+    showFatal("ERROR", e.error || e.message || e);
+    requestRecover("window.error");
   });
 
-  function generateName(){
-    const a = ["Myo","Nya","Zuo","Kiri","Peko","Vivi","Lumo","Rabi","Mimi","Sora","Dodo","Koko","Noro","Puru","Mogu"];
-    const b = ["blob","mite","ling","core","seed","goo","puff","wisp","morph","bud","nug","sprout","gazer","drift","node"];
-    return pick(a) + pick(b);
-  }
+  window.addEventListener("unhandledrejection", (e) => {
+    showFatal("ERROR", e.reason || e);
+    requestRecover("unhandledrejection");
+  });
 
-  function loadState(){
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw) return null;
-      const s = JSON.parse(raw);
-      if(!s || typeof s !== "object") return null;
-      return s;
-    }catch(e){ return null; }
-  }
-  function saveState(){
-    try{
-      state.lastSeen = now();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    }catch(e){}
-  }
 
-  // ---------- Elements ----------
-  const cv = $("#cv");
-  const ctx = cv.getContext("2d");
-  const toastEl = $("#toast");
-  const el = {
-    statusPill: $("#statusPill"),
-    petName: $("#petName"),
-    petStage: $("#petStage"),
-    petMood: $("#petMood"),
-    petLv: $("#petLv"),
-    energyBar: $("#energyBar"),
+  /* =========================================================
+     v8.4
+     - ③入力処理整理：playerCanShoot廃止（クールダウン一本化）
+     - ④パフォーマンス：星/シールド削りの割当削減、描画スケールキャッシュ
+     - ⑥モバイル操作：スティック/ボタンを画面サイズに追従
 
-    promptText: $("#promptText"),
-    typeInput: $("#typeInput"),
+     v8.2
+     - v8.1 の改善点（①②③-8④）を維持
+     - ★追加：自機の発射クールダウン（連射抑制）
+  ========================================================= */
 
-    btnSubmit: $("#btnSubmit"),
-    btnNewPrompt: $("#btnNewPrompt"),
-    btnSnapshot: $("#btnSnapshot"),
-    btnShare: $("#btnShare"),
-    btnReset: $("#btnReset"),
+  const CONFIG = {
+    enemy: {
+      cols: 11,
+      rows: 5,
 
-    wpmNow: $("#wpmNow"),
-    accNow: $("#accNow"),
-    comboNow: $("#comboNow"),
-    traitNow: $("#traitNow"),
-    log: $("#log"),
+      // 移動
+      moveBaseInterval: 150,
+      moveMinInterval: 12,
+      moveLastOneCap: 10,
+      moveCurvePow: 1.55,
+      waveSpeedMulK: 0.06,
+
+      stepMoveXBaseMulU: 1.35,
+      stepMoveXWaveK: 0.03,
+      stepMoveXLastOneMul: 0.90,
+
+      stepDownMulU: 1.6,
+      wallPauseMs: 70,
+      wallMargin: 10,
+
+      // 発射（指数カーブ）
+      fireIntervalBase: 140,
+      fireIntervalDecay: 0.93,
+      fireIntervalMin: 22,
+
+      maxBulletsBase: 2,
+      maxBulletsWaveDiv: 4,
+      maxBulletsCap: 12,
+
+      burstBase: 1,
+      burstWaveDiv: 6,
+      burstCap: 3,
+    },
+    shield: {
+      contactEvery: 3,
+      contactMaxPerShield: 8,
+      contactPerEnemy: 3,
+      contactHitsCap: 40,
+      contactYSlack: 24,
+    },
+    player: {
+      speedPC: 4,
+      speedMobile: 3,
+      invincibleFrames: 60,
+      bulletW: 4,
+      bulletH: 10,
+
+      // ★追加：発射間隔（ms） 例）250/350/500
+      shootCooldownMs: 500
+    }
   };
 
-  // ---------- Toast ----------
-  function toast(msg){
-    toastEl.textContent = msg;
-    toastEl.classList.add("show");
-    clearTimeout(toast._t);
-    toast._t = setTimeout(()=>toastEl.classList.remove("show"), 1100);
-  }
+  const UA = navigator.userAgent || "";
+  const IS_IOS = /iP(hone|ad|od)/.test(UA);
 
-  // ---------- Logs ----------
-  function pushLog(kind, msg){
-    const item = { t: now(), kind, msg };
-    state.log = state.log || [];
-    state.log.unshift(item);
-    state.log = state.log.slice(0, 60);
-    renderLog();
-    saveState();
-  }
-  function renderLog(){
-    el.log.innerHTML = "";
-    (state.log||[]).forEach(it=>{
-      const div = document.createElement("div");
-      div.className = `logItem ${it.kind||"info"}`;
-      div.innerHTML = `<div class="t">${fmtTime(it.t)}</div><div>${escapeHtml(it.msg)}</div>`;
-      el.log.appendChild(div);
+  const cv = document.getElementById("cv");
+  const ctx = cv.getContext("2d", { alpha:false, desynchronized:true })
+           || cv.getContext("2d", { alpha:false })
+           || cv.getContext("2d");
+  if(!ctx) failHard("Canvas 2D context not available");
+
+  let DPR = 1;
+
+  let state = null; // declared early so resizeCanvas can update viewport safely
+  let VIEW_W = innerWidth, VIEW_H = innerHeight;
+
+
+  // iOSジェスチャ抑制：canvas 限定
+  if (IS_IOS) {
+    ["gesturestart","gesturechange","gestureend","dblclick"].forEach(t => {
+      cv.addEventListener(t, e => e.preventDefault(), { passive:false });
     });
   }
 
-  // ---------- Pet naming ----------
-  function stageName(stage){
-    return ["芽生え","ぷるぷる","発光体","多脚体","未知体"][clamp(stage,0,4)];
-  }
-  function moodName(m){
-    if(m < 0.25) return "calm";
-    if(m < 0.55) return "curious";
-    if(m < 0.80) return "wild";
-    return "feral";
-  }
-  function traitFrom(s){
-    const { friendliness, glow, spikes, wobble } = s;
-    if (friendliness > 0.68 && spikes < 0.45) return "gentle";
-    if (glow > 0.70 && friendliness > 0.55) return "radiant";
-    if (spikes > 0.72 && friendliness < 0.50) return "spiky";
-    if (wobble > 0.70) return "jelly";
-    return "balanced";
-  }
+  scoreEl = document.getElementById("score");
+  waveEl  = document.getElementById("wave");
+  lifeEl  = document.getElementById("life");
+  msgEl   = document.getElementById("msg");
+  pauseBtn = document.getElementById("pauseBtn");
+  if(!scoreEl || !waveEl || !lifeEl || !msgEl || !pauseBtn) failHard("DOM init failed");
 
-  // ---------- Init state ----------
-  let state = loadState() || defaultState();
-  (function migrate(){
-    const d = defaultState();
-    for(const k in d){
-      if(state[k] === undefined) state[k] = d[k];
+  // --- Restart by tapping only the "Tap or Enter" hint (GAME OVER) ---
+  function bindRestartHint(){
+    // Stabilization: restart is handled globally (tap anywhere). Keep this for legacy safety.
+    return;
+    const hint = document.getElementById("restartHint");
+    if(!hint) return;
+
+    const handler = (e) => {
+      if(!state.over || state.paused) return;
+      logic.reset();
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    // Replace handlers (no stacking)
+    hint.onpointerup = null;
+    hint.onclick = null;
+    hint.ontouchend = null;
+
+    if("PointerEvent" in window){
+      hint.onpointerup = handler;
+      hint.onclick = handler; // desktop fallback
+    }else{
+      hint.ontouchend = handler;
+      hint.onclick = handler;
     }
-    state.log = state.log || [];
-    state.prompts = state.prompts || {};
-    state.energy = clamp(state.energy ?? 0.7, 0, 1);
-    state.mood = clamp(state.mood ?? 0.55, 0, 1);
-    state.glow = clamp(state.glow ?? 0.45, 0, 1);
-    state.spikes = clamp(state.spikes ?? 0.25, 0, 1);
-    state.wobble = clamp(state.wobble ?? 0.35, 0, 1);
-    state.friendliness = clamp(state.friendliness ?? 0.55, 0, 1);
-  })();
-
-  // passive recovery while away
-  const awayMs = now() - (state.lastSeen || now());
-  if (awayMs > 10_000) {
-    const mins = awayMs / 60000;
-    const rec = clamp(mins * 0.015, 0, 0.18);
-    state.energy = clamp((state.energy ?? 0.7) + rec, 0, 1);
-    state.log.unshift({t: now(), kind:"info", msg:`留守中にエネルギーが少し回復した (+${Math.round(rec*100)}%).`});
-    state.log = state.log.slice(0,60);
   }
 
-  // ---------- Typing session ----------
-  let session = {
-    startedAt: null,
-    lastKeyAt: null,
-    typed: "",
-    target: "",
-    idle: true
+  const controls = document.getElementById("controls");
+  const stickBase = document.getElementById("stickBase");
+  const stickKnob = document.getElementById("stickKnob");
+  const shootBtn = document.getElementById("shootBtn");
+  const shootLabel = document.getElementById("shootLabel");
+
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const aabb = (ax,ay,aw,ah,bx,by,bw,bh) =>
+    !(ax+aw<bx || ax>bx+bw || ay+ah<by || ay>by+bh);
+
+  const isFiniteNum = (v) => Number.isFinite(v);
+  const safeNum = (v, fallback=0) => (Number.isFinite(v) ? v : fallback);
+
+  const sanitizeState = (fm) => {
+    // Ensure critical numeric fields remain finite
+    state.px = safeNum(state.px, state.w/2);
+    state.fx = safeNum(state.fx, (state.w - fm.totalW)/2);
+    state.fy = safeNum(state.fy, fm.baseY);
+
+    // Clamp player and formation to sensible ranges
+    state.clampPlayer();
+
+    const formationH = (state.rows-1) * fm.stepY + state.enemyH;
+    const maxFy = Math.max(0, state.playerTopY() - formationH - 6);
+    state.fy = clamp(state.fy, 0, maxFy);
+
+    // If core arrays are missing/corrupt, rebuild the wave safely
+    if(!Array.isArray(state.hpGrid) || state.hpGrid.length !== state.rows){
+      enemies.spawnEnemies();
+      shields.spawnShields();
+    }
   };
 
-  // IME composition tracking（変換中の暴れ防止）
-  let composing = false;
 
-  // last key kind for sound
-  let lastKeyKind = "char";
-
-  // ---------- Prompt rendering (per-character) ----------
-  let promptChars = [];
-
-  function renderPromptChars(text){
-    el.promptText.innerHTML = "";
-    promptChars = [];
-    for(let i=0;i<text.length;i++){
-      const span = document.createElement("span");
-      span.className = "ch todo";
-      span.dataset.i = String(i);
-      const ch = text[i];
-      span.textContent = (ch === " ") ? "\u00A0" : ch;
-      el.promptText.appendChild(span);
-      promptChars.push(span);
+  function resizeCanvas(){
+      // HiDPI: render at devicePixelRatio (capped for performance)
+      DPR = Math.min(2, window.devicePixelRatio || 1);
+      const w = innerWidth, h = innerHeight;
+      VIEW_W = w; VIEW_H = h;
+      if(state) state.updateViewport(w,h);
+      cv.style.width = w + "px";
+      cv.style.height = h + "px";
+      cv.width  = Math.max(1, Math.round(w * DPR));
+      cv.height = Math.max(1, Math.round(h * DPR));
+      // Draw in CSS pixels
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.imageSmoothingEnabled = false;
     }
-    updatePromptHighlight("");
+  function calcU(w=innerWidth,h=innerHeight){
+    const minDim = Math.min(w,h);
+    const u = Math.round(minDim/110);
+    return clamp(u, 4, 12);
+  }
+  function isCoarse(){
+    return (window.matchMedia && window.matchMedia("(pointer: coarse)").matches)
+      || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+  }
+  const SHIP = [
+    "000010000",
+    "000111000",
+    "001111100",
+    "011111110",
+    "111111111"
+  ];
+
+  const ENEMY_TYPES = [
+    // Type 0: SQUID (top)
+    { a:[
+        "00100100100",
+        "00011111000",
+        "00111111100",
+        "01101110110",
+        "11111111111",
+        "10111111101",
+        "00100100100",
+        "01000000010",
+      ],
+      b:[
+        "00100100100",
+        "00011111000",
+        "00111111100",
+        "01101110110",
+        "11111111111",
+        "10111111101",
+        "01001001000",
+        "00010010010",
+      ]
+    },
+
+    // Type 1: CRAB (middle)
+    { a:[
+        "01100000110",
+        "00111111100",
+        "01111111110",
+        "11101110111",
+        "11111111111",
+        "00110001100",
+        "01100000110",
+        "11000000011",
+      ],
+      b:[
+        "01100000110",
+        "00111111100",
+        "01111111110",
+        "11101110111",
+        "11111111111",
+        "00110001100",
+        "11000000011",
+        "01100000110",
+      ]
+    },
+
+    // Type 2: OCTOPUS (bottom)
+    { a:[
+        "00011111000",
+        "00111111100",
+        "01111111110",
+        "11010101011",
+        "11111111111",
+        "00111111100",
+        "01011011010",
+        "10100000101",
+      ],
+      b:[
+        "00011111000",
+        "00111111100",
+        "01111111110",
+        "11010101011",
+        "11111111111",
+        "00111111100",
+        "10101110101",
+        "01000000010",
+      ]
+    },
+  ];
+
+  const ENEMY_SPR_W = ENEMY_TYPES[0].a[0].length; // 11
+  const ENEMY_SPR_H = ENEMY_TYPES[0].a.length;    // 8
+  const SHIELD = [
+    "001111111100",
+    "011111111110",
+    "111111111111",
+    "111111111111",
+    "111110011111",
+    "111100001111",
+    "111000000111",
+    "110000000011"
+  ];
+
+
+  function drawBitmap(lines, x, y, scale, color){
+      ctx.fillStyle = color;
+      const h = lines.length;
+      for(let r=0;r<h;r++){
+        const row = lines[r];
+        const y0 = y + r*scale;
+        const w = row.length;
+        for(let c=0;c<w;c++){
+          if(row[c]==="1") ctx.fillRect(x + c*scale, y0, scale, scale);
+        }
+      }
+    }
+
+  class Pool {
+    constructor(createFn, resetFn, initial=64){
+      this._create = createFn;
+      this._reset = resetFn || (()=>{});
+      this._free = [];
+      this._active = [];
+      for(let i=0;i<initial;i++) this._free.push(this._create());
+    }
+    acquire(){
+      const o = this._free.length ? this._free.pop() : this._create();
+      this._active.push(o);
+      return o;
+    }
+    releaseAt(i){
+      const o = this._active[i];
+      this._active[i] = this._active[this._active.length-1];
+      this._active.pop();
+      this._reset(o);
+      this._free.push(o);
+    }
+    get active(){ return this._active; }
+    clear(){
+      for(let i=this._active.length-1;i>=0;i--) this.releaseAt(i);
+    }
   }
 
-  function updatePromptHighlight(typed){
-    const target = session.target || "";
-    const tLen = target.length;
-    const uLen = typed.length;
+  class GameState {
+    constructor(){
+      this.U = calcU();
+      this.isMobile = isCoarse();
 
-    const min = Math.min(tLen, promptChars.length);
-    for(let i=0;i<min;i++){
-      const sp = promptChars[i];
-      sp.classList.remove("ok","bad","todo","caret");
-      if(i < uLen){
-        const ok = typed[i] === target[i];
-        sp.classList.add(ok ? "ok" : "bad");
+      // viewport cache (CSS pixels)
+      this.w = VIEW_W;
+      this.h = VIEW_H;
+
+      this.shipW = 0; this.shipH = 0;
+      this.enemyW = 0; this.enemyH = 0;
+      this.shieldW = 0; this.shieldH = 0;
+
+      this.score = 0;
+      this.wave = 1;
+      this.life = 3;
+
+      this.ready = true;
+      this.clearing = false;
+      this.over = false;
+      this.paused = false;
+
+      this.hitStop = 0;
+      this._pendingGameOver = false;
+
+      this.invincible = 0;
+      this.safeTimer = 0;
+
+      this.holdL = false;
+      this.holdR = false;
+      this.playerBottomPx = 70;
+      this.px = this.w/2;
+
+      // ★追加：発射クールダウン残り（ms）
+      this.shootCd = 0;
+
+      // timers (setTimeout handles)
+      this._timers = new Set();
+      this._msgTimer = 0;
+
+      this.stars = [];
+
+      this.cols = CONFIG.enemy.cols;
+      this.rows = CONFIG.enemy.rows;
+
+      this.fx = 0; this.fy = 0; this.dir = 1;
+      this.prevFx = 0; this.prevFy = 0;
+
+      this.enemyInitialCount = 0;
+      this.enemyFrame = 0;
+      this.enemyAnimTick = 0;
+      this.enemyShootTick = 0;
+      this.moveAcc = 0;
+      this.wallPause = 0;
+
+      this.hpGrid = [];
+
+      this.aliveIds = [];
+      this.aliveIndex = null; // TypedArray
+      this.aliveStats = { minC:0, maxC:this.cols-1, maxR:this.rows-1, count:0 };
+      this.aliveDirty = true;
+
+      this.shields = [];
+      this.shieldBoxes = [];
+
+      this.shieldContactTick = 0;
+      this.shieldContactEvery = CONFIG.shield.contactEvery;
+
+      this.BW = CONFIG.player.bulletW;
+      this.BH = CONFIG.player.bulletH;
+
+      this.colors = {
+        shield: () => "#ff0000",
+        player: () => "#44d9ff",
+        row: ["#39ff14","#39ff14","#44d9ff","#44d9ff","#ff3cff"]
+      };
+
+      // Row -> enemy type mapping (Space Invaders style):
+      // rows: [SQUID, CRAB, CRAB, OCTOPUS, OCTOPUS]
+      this.rowTypeMap = [0,1,1,2,2];
+
+      // Row -> score mapping (top -> bottom):
+      // Edit this single line to change enemy points per row.
+      this.rowScoreMap = [30,20,20,10,10];
+
+      this.fm = { stepX:0, stepY:0, totalW:0, baseY:0, minGapX:0, minGapY:0 };
+      this.fmDirty = true;
+    }
+
+    updateLifeHud(){
+      lifeEl.textContent = "❤️".repeat(Math.max(0, this.life));
+    }
+
+
+    updateViewport(w,h){
+      this.w = w; this.h = h;
+      const newU = calcU(w,h);
+      if(newU !== this.U){
+        this.U = newU;
+        // pointer capability can change (e.g., docking) but cheap to refresh
+        this.isMobile = isCoarse();
+      }
+      this.recalcSizes();
+      this.clampPlayer();
+      this.fmDirty = true;
+    }
+
+    // timer manager (for scheduled state transitions/messages)
+    setTimer(fn, ms){
+      const id = setTimeout(() => {
+        this._timers.delete(id);
+        fn();
+      }, ms);
+      this._timers.add(id);
+      return id;
+    }
+    clearTimer(id){
+      if(!id) return;
+      clearTimeout(id);
+      this._timers.delete(id);
+    }
+    clearAllTimers(){
+      for(const id of this._timers) clearTimeout(id);
+      this._timers.clear();
+      this._msgTimer = 0;
+    }
+
+    playerTopY(){
+      return this.h - this.playerBottomPx - this.shipH;
+    }
+
+    clampPlayer(){
+      this.px = clamp(this.px, this.shipW/2, this.w - this.shipW/2);
+    }
+
+    recalcSizes(){
+      this.shipW = SHIP[0].length * this.U;
+      this.shipH = SHIP.length * this.U;
+
+      const margin = 12;
+      const minGapX = 0.90 * this.U;
+      const availW = Math.max(120, this.w - margin*2);
+      const maxEnemyW = (availW - (this.cols-1)*minGapX) / this.cols;
+      const scale = this.isMobile ? 0.78 : 0.86;
+      const targetW = maxEnemyW * scale;
+
+      const maxMul = this.isMobile ? 5.8 : 8.5;
+      this.enemyW = clamp(targetW, 2.6*this.U, maxMul*this.U);
+      this.enemyH = this.enemyW * (ENEMY_SPR_H/ENEMY_SPR_W);
+
+      // Shield size follows SHIELD bitmap dimensions
+      this.shieldW = SHIELD[0].length * this.U;
+      this.shieldH = SHIELD.length * this.U;
+
+      this.fmDirty = true;
+    }
+
+resetStars(){
+  const N = 120;
+  if(this.stars.length !== N){
+    this.stars.length = 0;
+    for(let i=0;i<N;i++){
+      this.stars.push({x:0,y:0,s:1});
+    }
+  }
+  for(let i=0;i<N;i++){
+    const st = this.stars[i];
+    st.x = Math.random()*this.w;
+    st.y = Math.random()*this.h;
+    st.s = 0.6 + Math.random()*1.2;
+  }
+}
+
+    _computeFormationMetrics(){
+      const minGapX = 0.90*this.U, minGapY = 1.10*this.U;
+      const stepX = this.enemyW + minGapX;
+      const stepY = this.enemyH + minGapY;
+      const totalW = this.cols*this.enemyW + (this.cols-1)*minGapX;
+      const baseY = this.isMobile ? Math.max(52, this.h*0.14) : Math.max(90, this.h*0.22);
+      this.fm = { stepX, stepY, totalW, baseY, minGapX, minGapY };
+      this.fmDirty = false;
+    }
+
+    getFM(){
+      if(this.fmDirty) this._computeFormationMetrics();
+      return this.fm;
+    }
+
+    rowKillScore(r){
+      // Use rowScoreMap when available (top -> bottom)
+      if(Array.isArray(this.rowScoreMap) && this.rowScoreMap.length){
+        return this.rowScoreMap[r] ?? this.rowScoreMap[this.rowScoreMap.length-1] ?? 10;
+      }
+      // Fallback
+      return (this.rows - r) * 10;
+    }
+
+    enemyProfile(){
+      const e = CONFIG.enemy;
+      const fireInterval = Math.max(
+        e.fireIntervalMin,
+        Math.floor(e.fireIntervalBase * Math.pow(e.fireIntervalDecay, Math.max(0, this.wave-1)))
+      );
+      const maxBullets = Math.min(
+        e.maxBulletsCap,
+        e.maxBulletsBase + Math.floor((this.wave-1) / e.maxBulletsWaveDiv)
+      );
+      const burst = Math.min(
+        e.burstCap,
+        e.burstBase + Math.floor((this.wave-1) / e.burstWaveDiv)
+      );
+      return { fireInterval, maxBullets, burst };
+    }
+
+    buildShieldBits(){
+      const h = SHIELD.length, w = SHIELD[0].length;
+      const bits = Array.from({length:h}, (_,r)=>Array.from({length:w},(_,c)=>SHIELD[r][c]==="1"));
+      return {bits,w,h};
+    }
+
+    computeShieldLayout(){
+      const topMin = 40;
+      const gapFromPlayer = 14;
+      const defaultOffset = 80;
+
+      const playerY = this.playerTopY();
+      let y = playerY - defaultOffset;
+
+      const maxY = playerY - this.shieldH - gapFromPlayer;
+      y = Math.min(y, maxY);
+      y = Math.max(y, topMin);
+
+      if(maxY < topMin){
+        y = Math.max(0, maxY);
+      }
+
+      const xs = [0.2,0.4,0.6,0.8];
+      return xs.map(v => ({ x: this.w * v - this.shieldW/2, y }));
+    }
+  }
+
+  class EnemySystem {
+    constructor(state){ this.s = state; }
+
+    _rebuildAliveCache(){
+      const s = this.s;
+      const total = s.rows * s.cols;
+      s.aliveIds.length = 0;
+
+      s.aliveIndex = new Int16Array(total);
+      s.aliveIndex.fill(-1);
+
+      const enemyScale = Math.max(1, Math.round(s.enemyW/ENEMY_SPR_W));
+      for(let r=0;r<s.rows;r++){
+        for(let c=0;c<s.cols;c++){
+          if(s.hpGrid[r][c] > 0){
+            const id = r*s.cols + c;
+            s.aliveIndex[id] = s.aliveIds.length;
+            s.aliveIds.push(id);
+          }
+        }
+      }
+      s.aliveDirty = true;
+      this._refreshAliveStatsIfNeeded();
+      s.enemyInitialCount = s.aliveIds.length;
+    }
+
+    _refreshAliveStatsIfNeeded(){
+      const s = this.s;
+      if(!s.aliveDirty) return;
+      s.aliveDirty = false;
+
+      let minC = s.cols, maxC = -1, maxR = -1;
+      for(let i=0;i<s.aliveIds.length;i++){
+        const id = s.aliveIds[i];
+        const r = (id / s.cols) | 0;
+        const c = id - r*s.cols;
+        if(c < minC) minC = c;
+        if(c > maxC) maxC = c;
+        if(r > maxR) maxR = r;
+      }
+      if(maxC < 0){
+        minC = 0; maxC = s.cols-1; maxR = s.rows-1;
+      }
+      s.aliveStats = { minC, maxC, maxR, count: s.aliveIds.length };
+    }
+
+    spawnEnemies(){
+      const s = this.s;
+      const fm = s.getFM();
+      s.cols = CONFIG.enemy.cols; s.rows = CONFIG.enemy.rows;
+
+      const hp2 = (s.wave >= 4);
+      s.hpGrid = Array.from({length:s.rows}, () => Array.from({length:s.cols}, () => 1));
+      if (hp2) {
+        for (let r=0;r<Math.min(2,s.rows);r++){
+          for (let c=0;c<s.cols;c++) s.hpGrid[r][c] = 2;
+        }
+      }
+
+      s.fx = (s.w - fm.totalW)/2;
+      s.fy = fm.baseY;
+      s.dir = 1;
+
+      s.moveAcc = 0;
+      s.wallPause = 0;
+
+      s.enemyFrame = 0;
+      s.enemyAnimTick = 0;
+      s.enemyShootTick = 0;
+
+      this._rebuildAliveCache();
+    }
+
+    onEnemyDamagedOrKilled(r,c){
+      const s = this.s;
+      if(s.hpGrid[r][c] > 0) return;
+
+      const id = r*s.cols + c;
+      const idx = s.aliveIndex[id];
+      if(idx < 0) return;
+
+      const lastId = s.aliveIds[s.aliveIds.length-1];
+      s.aliveIds[idx] = lastId;
+      s.aliveIndex[lastId] = idx;
+      s.aliveIds.pop();
+      s.aliveIndex[id] = -1;
+
+      s.aliveDirty = true;
+    }
+
+    countAlive(){ return this.s.aliveIds.length; }
+
+    randomAliveRC(){
+      const s = this.s;
+      const n = s.aliveIds.length;
+      if(!n) return null;
+      const id = s.aliveIds[(Math.random()*n)|0];
+      const r = (id / s.cols) | 0;
+      const c = id - r*s.cols;
+      return {r,c};
+    }
+
+    updateAnim(){
+      const s = this.s;
+      s.enemyAnimTick++;
+      if(s.enemyAnimTick >= 28){
+        s.enemyAnimTick = 0;
+        s.enemyFrame = 1 - s.enemyFrame;
+      }
+    }
+
+    getAliveStats(){
+      this._refreshAliveStatsIfNeeded();
+      return this.s.aliveStats;
+    }
+  }
+
+  class ShieldSystem {
+    constructor(state){ this.s = state; }
+
+    spawnShields(){
+      const s = this.s;
+      s.shields.length = 0;
+      const proto = s.buildShieldBits();
+      const layout = s.computeShieldLayout();
+      for (let i=0;i<layout.length;i++){
+        const {x,y} = layout[i];
+        const bits = proto.bits.map(row=>row.slice());
+        s.shields.push({x,y,bits,w:proto.w,h:proto.h});
+      }
+      this.rebuildShieldBoxes();
+    }
+
+    relayoutShields(){
+      const s = this.s;
+      if(!s.shields.length){ this.spawnShields(); return; }
+      const layout = s.computeShieldLayout();
+      for(let i=0;i<s.shields.length && i<layout.length;i++){
+        s.shields[i].x = layout[i].x;
+        s.shields[i].y = layout[i].y;
+      }
+      this.rebuildShieldBoxes();
+    }
+
+    rebuildShieldBoxes(){
+      const s = this.s;
+      s.shieldBoxes = s.shields.map(sh => ({
+        x:sh.x, y:sh.y, w:s.shieldW, h:s.shieldH,
+        ref:sh
+      }));
+    }
+
+    shieldHitAndDamage(bx,by,bw,bh){
+      const s = this.s;
+      if (!s.shields.length) return false;
+
+      const cx = bx + bw/2;
+      let best = null;
+      let bestD = Infinity;
+      for (let i=0;i<s.shieldBoxes.length;i++){
+        const box = s.shieldBoxes[i];
+        const mid = box.x + box.w/2;
+        const d = Math.abs(cx - mid);
+        if (d < bestD) { bestD = d; best = box; }
+      }
+
+      const tryDamage = (box) => {
+        if(!aabb(bx,by,bw,bh, box.x,box.y, box.w,box.h)) return false;
+        const sh = box.ref;
+
+        const rx = clamp(Math.floor(((bx+bw/2)-sh.x)/s.U), 0, sh.w-1);
+        const ry = clamp(Math.floor(((by+bh/2)-sh.y)/s.U), 0, sh.h-1);
+
+        let pickR = -1, pickC = -1, seen = 0;
+        for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+          const cx = rx + dx, cy = ry + dy;
+          if(cy>=0 && cy<sh.h && cx>=0 && cx<sh.w && sh.bits[cy][cx]){
+            seen++;
+            // reservoir sampling
+            if((Math.random()*seen) < 1){ pickR = cy; pickC = cx; }
+          }
+        }
+        if(pickR >= 0) sh.bits[pickR][pickC] = false;
+        return true;
+      };
+
+      if (best && tryDamage(best)) return true;
+      for (let i=0;i<s.shieldBoxes.length;i++){
+        const box = s.shieldBoxes[i];
+        if (box === best) continue;
+        if (tryDamage(box)) return true;
+      }
+      return false;
+    }
+
+    damageShieldRandom(shield, hits){
+      hits = Math.max(0, hits|0);
+      if(!hits) return;
+      let attempts = hits * 10;
+      while(hits > 0 && attempts-- > 0){
+        const r = (Math.random() * shield.h) | 0;
+        const c = (Math.random() * shield.w) | 0;
+        if(shield.bits[r][c]){
+          shield.bits[r][c] = false;
+          hits--;
+        }
+      }
+    }
+  }
+
+  class ProjectileSystem {
+    constructor(state, enemySystem, shieldSystem){
+      this.s = state;
+      this.enemies = enemySystem;
+      this.shields = shieldSystem;
+
+      const resetBullet = (b)=>{ b.x=0; b.y=0; b.v=0; };
+      const resetBoom = (p)=>{ p.x=0; p.y=0; p.vx=0; p.vy=0; p.t=0; };
+
+      this.playerBullets = new Pool(()=>({x:0,y:0,v:0}), resetBullet, 32);
+      this.enemyBullets  = new Pool(()=>({x:0,y:0,v:0}), resetBullet, 64);
+      this.booms         = new Pool(()=>({x:0,y:0,vx:0,vy:0,t:0}), resetBoom, 128);
+    }
+
+    clearAll(){
+      this.playerBullets.clear();
+      this.enemyBullets.clear();
+      this.booms.clear();
+    }
+
+    boom(x,y){
+      for(let i=0;i<10;i++){
+        const p = this.booms.acquire();
+        p.x = x; p.y = y;
+        p.vx = (Math.random()-.5)*5;
+        p.vy = (Math.random()-.5)*5;
+        p.t = 18;
+      }
+    }
+
+    // ★変更：発射クールダウンをチェック
+    shootPlayerOnce(){
+      const s = this.s;
+      if(s.paused) return;
+      if(s.ready || s.clearing || s.over) return;
+
+      // クールダウン中は発射しない
+      if(s.shootCd > 0) return;
+
+      // 発射したらクールダウン開始
+      s.shootCd = CONFIG.player.shootCooldownMs;
+
+      const b = this.playerBullets.acquire();
+      b.x = s.px - s.BW/2;
+      b.y = s.playerTopY();
+      b.v = -10;
+    }
+
+    enemyShoot(fm){
+      const s = this.s;
+      if(s.paused) return;
+      if(s.ready || s.clearing || s.over) return;
+
+      const prof = s.enemyProfile();
+      if(this.enemyBullets.active.length >= prof.maxBullets) return;
+
+      const pick = this.enemies.randomAliveRC();
+      if(!pick) return;
+
+      const {r,c} = pick;
+      const ex = s.fx + c*fm.stepX, ey = s.fy + r*fm.stepY;
+
+      const baseV = (s.isMobile ? 5 : 7);
+      const add = Math.min(3, (s.wave-1) * 0.18);
+      const v = baseV + add;
+
+      const shots = Math.min(prof.burst, prof.maxBullets - this.enemyBullets.active.length);
+      for(let k=0;k<shots;k++){
+        const spread = (k - (shots-1)/2) * (s.BW + 2);
+        const b = this.enemyBullets.acquire();
+        b.x = ex + s.enemyW/2 - s.BW/2 + spread;
+        b.y = ey + s.enemyH;
+        b.v = v;
+      }
+    }
+
+    update(T){
+      const s = this.s;
+
+      const pbs = this.playerBullets.active;
+      for(let i=pbs.length-1;i>=0;i--){
+        const b = pbs[i];
+        b.y += b.v * T.f;
+        if(b.y < -20) this.playerBullets.releaseAt(i);
+      }
+
+      const ebs = this.enemyBullets.active;
+      for(let i=ebs.length-1;i>=0;i--){
+        const b = ebs[i];
+        b.y += b.v * T.f;
+        if(b.y > s.h + 30) this.enemyBullets.releaseAt(i);
+      }
+
+      const booms = this.booms.active;
+      for(let i=booms.length-1;i>=0;i--){
+        const p = booms[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.t--;
+        if(p.t <= 0) this.booms.releaseAt(i);
+      }
+    }
+  }
+
+  class CollisionSystem {
+    constructor(state, enemies, shields, projectiles){
+      this.s = state;
+      this.enemies = enemies;
+      this.shields = shields;
+      this.pj = projectiles;
+    }
+
+    triggerRamming(contactFy){
+      const s = this.s;
+      if(s.over) return;
+      s.fy = contactFy;
+
+      s.hitStop = 200;
+      if(s._pendingGameOver) return;
+      s._pendingGameOver = true;
+
+      s.setTimer(() => {
+        s.hitStop = 0;
+        s._pendingGameOver = false;
+        this.gameOver();
+      }, 200);
+    }
+
+    gameOver(){
+      const s = this.s;
+      if(s.over) return;
+      s.over = true;
+      s.paused = false;
+      pauseBtn.textContent = "PAUSE";
+      pauseBtn.setAttribute("aria-pressed", "false");
+      msgEl.innerHTML = 'GAME OVER<br><span id="restartHint">TAP / CLICK / ENTER</span>';
+      msgEl.style.pointerEvents = "none";
+      s.holdL = false;
+      s.holdR = false;
+    }
+
+    nextWave(){
+      const s = this.s;
+      s.clearing = true;
+      if(!s.paused) msgEl.textContent = "CLEAR!";
+      s.setTimer(() => {
+        if(s.paused) return;
+        msgEl.textContent = "";
+      msgEl.style.pointerEvents = "none";
+        s.wave++;
+        waveEl.textContent = s.wave;
+        s.clearing = false;
+        this.enemies.spawnEnemies();
+        this.shields.spawnShields();
+        this.showReady();
+      }, 900);
+    }
+
+    showReady(){
+      const s = this.s;
+      s.clearTimer(s._msgTimer);
+      if(!s.paused) msgEl.textContent = "";
+      s.ready = true;
+      s.safeTimer = Math.floor(s.wave * 0.5 * 60);
+      s._msgTimer = s.setTimer(() => {
+        if(!s.over && !s.paused) msgEl.textContent = "";
+        s.ready = false;
+        s._msgTimer = 0;
+      }, 900);
+    }
+
+    detect(fm){
+      const s = this.s;
+      if(s.paused) return;
+      if(s.hitStop > 0) return;
+
+      // 敵がシールドに触れている間の削り判定を軽量化
+      s.shieldContactTick++;
+      if(s.shieldContactTick % s.shieldContactEvery === 0 && s.shieldBoxes.length && s.aliveIds.length){
+
+        const st = this.enemies.getAliveStats();
+        const maxAliveR = st.maxR;
+        const enemyTop = s.fy;
+        const enemyBottom = s.fy + maxAliveR * fm.stepY + s.enemyH;
+
+        let anyShieldInBand = false;
+        const slack = CONFIG.shield.contactYSlack;
+        for(const box of s.shieldBoxes){
+          if(!(box.y > enemyBottom + slack || (box.y + box.h) < enemyTop - slack)){
+            anyShieldInBand = true;
+            break;
+          }
+        }
+
+        if(anyShieldInBand){
+          const aliveIds = s.aliveIds;
+
+          for(const box of s.shieldBoxes){
+            if(box.y > enemyBottom + slack || (box.y + box.h) < enemyTop - slack) continue;
+
+            const cMin = clamp(Math.floor((box.x - s.fx) / fm.stepX) - 1, 0, s.cols-1);
+            const cMax = clamp(Math.floor(((box.x + box.w) - s.fx) / fm.stepX) + 1, 0, s.cols-1);
+
+            let contacts = 0;
+
+            for(let i=0;i<aliveIds.length;i++){
+              const id = aliveIds[i];
+              const r = (id / s.cols) | 0;
+              const c = id - r*s.cols;
+
+              if(c < cMin || c > cMax) continue;
+
+              const ex = s.fx + c*fm.stepX;
+              const ey = s.fy + r*fm.stepY;
+
+              if(aabb(ex, ey, s.enemyW, s.enemyH, box.x, box.y, box.w, box.h)){
+                contacts++;
+                if(contacts >= CONFIG.shield.contactMaxPerShield) break;
+              }
+            }
+
+            if(contacts > 0){
+              const hits = Math.min(CONFIG.shield.contactHitsCap, contacts * CONFIG.shield.contactPerEnemy);
+              this.shields.damageShieldRandom(box.ref, hits);
+            }
+          }
+        }
+      }
+
+      // 敵の体当たり（スイープAABB）
+      if(!s.over && !s.ready && !s.clearing){
+        const shipX = s.px - s.shipW/2;
+        const shipY = s.playerTopY();
+        const shipW = s.shipW;
+        const shipH = s.shipH;
+
+        const fx0 = (typeof s.prevFx === "number") ? s.prevFx : s.fx;
+        const fy0 = (typeof s.prevFy === "number") ? s.prevFy : s.fy;
+
+        const st = this.enemies.getAliveStats();
+        const maxAliveR = st.maxR;
+
+        const aliveIds = s.aliveIds;
+        for(let i=0;i<aliveIds.length;i++){
+          const id = aliveIds[i];
+          const r = (id / s.cols) | 0;
+          const c = id - r*s.cols;
+
+          const exA = fx0 + c*fm.stepX;
+          const eyA = fy0 + r*fm.stepY;
+          const exB = s.fx + c*fm.stepX;
+          const eyB = s.fy + r*fm.stepY;
+
+          const sx = Math.min(exA, exB);
+          const sy = Math.min(eyA, eyB);
+          const sw = Math.max(exA + s.enemyW, exB + s.enemyW) - sx;
+          const sh = Math.max(eyA + s.enemyH, eyB + s.enemyH) - sy;
+
+          if(aabb(sx, sy, sw, sh, shipX, shipY, shipW, shipH)){
+            if(maxAliveR >= 0){
+              const enemyBottom = s.fy + maxAliveR*fm.stepY + s.enemyH;
+              const over = enemyBottom - shipY;
+              if(over > 0) s.fy -= over;
+            }
+
+            const HIT_MS = 260;
+            s.hitStop = Math.max(s.hitStop, HIT_MS);
+
+            if(!s._pendingGameOver){
+              s._pendingGameOver = true;
+              s.setTimer(() => {
+                s.hitStop = 0;
+                s._pendingGameOver = false;
+                this.gameOver();
+              }, HIT_MS);
+            }
+            return;
+          }
+        }
+      }
+
+      // 弾 vs シールド
+      const pbs = this.pj.playerBullets.active;
+      for(let i=pbs.length-1;i>=0;i--){
+        const b = pbs[i];
+        if(this.shields.shieldHitAndDamage(b.x,b.y,s.BW,s.BH)) this.pj.playerBullets.releaseAt(i);
+      }
+      const ebs = this.pj.enemyBullets.active;
+      for(let i=ebs.length-1;i>=0;i--){
+        const b = ebs[i];
+        if(this.shields.shieldHitAndDamage(b.x,b.y,s.BW,s.BH)) this.pj.enemyBullets.releaseAt(i);
+      }
+
+      // 敵が自機に体当たり
+      if(!s.over){
+        const pl = s.px - s.shipW/2;
+        const pt = s.playerTopY();
+
+        const aliveIds = s.aliveIds;
+        for(let i=0;i<aliveIds.length;i++){
+          const id = aliveIds[i];
+          const r = (id / s.cols) | 0;
+          const c = id - r*s.cols;
+          const ex = s.fx + c*fm.stepX;
+          const ey = s.fy + r*fm.stepY;
+          if(aabb(ex,ey,s.enemyW,s.enemyH, pl,pt,s.shipW,s.shipH)){
+            s.fy = pt - (r * fm.stepY + s.enemyH);
+            this.triggerRamming(s.fy);
+            return;
+          }
+        }
+      }
+
+      // 自弾 vs 敵
+      for(let i=pbs.length-1;i>=0;i--){
+        const b = pbs[i];
+        const c = Math.floor((b.x - s.fx)/fm.stepX);
+        const r = Math.floor((b.y - s.fy)/fm.stepY);
+        if(r>=0 && r<s.rows && c>=0 && c<s.cols && s.hpGrid[r][c] > 0){
+          const ex = s.fx + c*fm.stepX;
+          const ey = s.fy + r*fm.stepY;
+          if(aabb(b.x,b.y,s.BW,s.BH, ex,ey, s.enemyW,s.enemyH)){
+            this.pj.playerBullets.releaseAt(i);
+
+            s.hpGrid[r][c]--;
+            this.pj.boom(ex+s.enemyW/2, ey+s.enemyH/2);
+
+            if(s.hpGrid[r][c] <= 0){
+              this.enemies.onEnemyDamagedOrKilled(r,c);
+              s.score += s.rowKillScore(r);
+              scoreEl.textContent = s.score;
+
+              if(this.enemies.countAlive()===0 && !s.over && !s.clearing){
+                this.nextWave();
+                return;
+              }
+            }
+          }
+        }
+      }
+
+      // 敵弾 vs 自機
+      if(!s.over){
+        const pl = s.px - s.shipW/2;
+        const pt = s.playerTopY();
+        for(let i=ebs.length-1;i>=0;i--){
+          const b = ebs[i];
+          if(aabb(b.x,b.y,s.BW,s.BH, pl,pt, s.shipW,s.shipH)){
+            this.pj.enemyBullets.releaseAt(i);
+            if(s.invincible===0 && s.safeTimer===0){
+              s.life--;
+              s.updateLifeHud();
+              this.pj.boom(s.px, pt+s.shipH/2);
+              s.invincible = CONFIG.player.invincibleFrames;
+              if(s.life<=0) this.gameOver();
+            }
+          }
+        }
+      }
+    }
+  }
+
+  class GameLogic {
+    constructor(state, enemies, shields, projectiles, collisions){
+      this.s = state;
+      this.enemies = enemies;
+      this.shields = shields;
+      this.pj = projectiles;
+      this.col = collisions;
+    }
+
+    setPaused(next){
+      const s = this.s;
+      if(s.over) return;
+      s.paused = !!next;
+      pauseBtn.textContent = s.paused ? "RESUME" : "PAUSE";
+      pauseBtn.setAttribute("aria-pressed", s.paused ? "true" : "false");
+      if(s.paused){
+        this._msgBeforePause = msgEl.innerHTML;
+        msgEl.textContent = "PAUSED";
+        msgEl.style.pointerEvents = "none";
+        s.holdL = false; s.holdR = false;
+        Input.stickReset();
       }else{
-        sp.classList.add("todo");
+        if(this._msgBeforePause && this._msgBeforePause !== "PAUSED") msgEl.innerHTML = this._msgBeforePause;
+        else msgEl.textContent = "";
+        // Re-enable hint tapping only if we restored GAME OVER message
+        msgEl.style.pointerEvents = "none";
+        this._msgBeforePause = "";
       }
     }
+    togglePause(){ this.setPaused(!this.s.paused); }
 
-    const caretPos = clamp(uLen, 0, Math.max(0, tLen-1));
-    if(promptChars[caretPos]){
-      promptChars[caretPos].classList.add("caret");
+    reset(){
+      const s = this.s;
+
+      s.clearAllTimers();
+
+      this.pj.clearAll();
+      s.shieldContactTick = 0;
+
+      msgEl.textContent = "";
+      s.score = 0;
+      s.wave = 1;
+      s.life = 3;
+
+      s.invincible = 0;
+      s.safeTimer = 0;
+
+      // ★追加：クールダウン初期化
+      s.shootCd = 0;
+
+      s.over = false;
+      s.clearing = false;
+
+      s.paused = false;
+      pauseBtn.textContent = "PAUSE";
+      pauseBtn.setAttribute("aria-pressed", "false");
+      this._msgBeforePause = "";
+      s.holdL = false; s.holdR = false;
+
+      scoreEl.textContent = "0";
+      waveEl.textContent = "1";
+      s.updateLifeHud();
+
+      s.px = s.w/2;
+      s.clampPlayer();
+
+      this.enemies.spawnEnemies();
+      this.shields.spawnShields();
+      this.col.showReady();
+    }
+
+    update(T, fm){
+      const s = this.s;
+      if(s.paused) return;
+
+      if(s.hitStop > 0){
+        s.hitStop -= T.ms;
+        return;
+      }
+
+      // ★追加：射撃クールダウンを減算
+      if(s.shootCd > 0) s.shootCd = Math.max(0, s.shootCd - T.ms);
+
+      for(const st of s.stars){
+        st.y += st.s * T.f;
+        if(st.y > s.h){
+          st.y = 0;
+          st.x = Math.random() * s.w;
+        }
+      }
+
+      if(s.invincible > 0) s.invincible--;
+      if(s.safeTimer > 0) s.safeTimer--;
+
+      const sp = s.isMobile ? CONFIG.player.speedMobile : CONFIG.player.speedPC;
+      if(!s.ready && !s.clearing && !s.over){
+        if(s.holdL) s.px -= sp;
+        if(s.holdR) s.px += sp;
+      }
+      s.clampPlayer();
+
+      s.prevFx = s.fx;
+      s.prevFy = s.fy;
+
+
+      const remaining = Math.max(1, this.enemies.countAlive());
+      const initialCount = s.enemyInitialCount || remaining;
+      const ratio = remaining / initialCount;
+
+      const st = this.enemies.getAliveStats();
+      const minAliveC = st.minC;
+      const maxAliveC = st.maxC;
+      const maxAliveR = st.maxR;
+
+      const e = CONFIG.enemy;
+
+      const t = 1 - ratio;
+      const curve = Math.pow(t, e.moveCurvePow);
+      let moveInterval = e.moveBaseInterval * (1 - curve) + e.moveMinInterval * curve;
+
+      const waveSpeedMul = 1 / (1 + (s.wave - 1) * e.waveSpeedMulK);
+      moveInterval *= waveSpeedMul;
+
+      if (remaining === 1) moveInterval = Math.max(moveInterval, e.moveLastOneCap);
+      moveInterval = Math.max(10, moveInterval);
+
+      let stepMoveX = e.stepMoveXBaseMulU*s.U*(1+(s.wave-1)*e.stepMoveXWaveK);
+      if(remaining === 1) stepMoveX *= e.stepMoveXLastOneMul;
+
+      const stepDown  = e.stepDownMulU*s.U;
+
+      if(!s.ready && !s.clearing && !s.over){
+        s.moveAcc += T.ms;
+        if(s.wallPause > 0){
+          const use = Math.min(s.wallPause, s.moveAcc);
+          s.wallPause -= use;
+          s.moveAcc -= use;
+        }
+        while(s.moveAcc >= moveInterval){
+          s.moveAcc -= moveInterval;
+
+          const nextFx = s.fx + s.dir * stepMoveX;
+
+          const nextAliveLeft  = nextFx + minAliveC * fm.stepX;
+          const nextAliveRight = nextFx + maxAliveC * fm.stepX + s.enemyW;
+
+          if (nextAliveRight > s.w - e.wallMargin) {
+            const overflow = nextAliveRight - (s.w - e.wallMargin);
+            s.fx = nextFx - overflow;
+            s.dir = -1;
+            s.fy += stepDown;
+
+            const playerTop = s.playerTopY();
+            const lowestBottom = s.fy + maxAliveR * fm.stepY + s.enemyH;
+            if (lowestBottom >= playerTop) {
+              s.fy = playerTop - (maxAliveR * fm.stepY + s.enemyH);
+              this.col.triggerRamming(s.fy);
+              return;
+            }
+
+            s.wallPause = e.wallPauseMs;
+            s.moveAcc = 0;
+            break;
+
+          } else if (nextAliveLeft < e.wallMargin) {
+            const overflow = e.wallMargin - nextAliveLeft;
+            s.fx = nextFx + overflow;
+            s.dir = 1;
+            s.fy += stepDown;
+
+            const playerTop = s.playerTopY();
+            const lowestBottom = s.fy + maxAliveR * fm.stepY + s.enemyH;
+            if (lowestBottom >= playerTop) {
+              s.fy = playerTop - (maxAliveR * fm.stepY + s.enemyH);
+              this.col.triggerRamming(s.fy);
+              return;
+            }
+
+            s.wallPause = e.wallPauseMs;
+            s.moveAcc = 0;
+            break;
+
+          } else {
+            s.fx = nextFx;
+          }
+        }
+      }
+
+      this.enemies.updateAnim();
+
+      if(!s.ready && !s.clearing && !s.over){
+        const prof = s.enemyProfile();
+        s.enemyShootTick++;
+        if(s.enemyShootTick >= prof.fireInterval){
+          s.enemyShootTick = 0;
+          this.pj.enemyShoot(fm);
+        }
+      }
+
+      this.pj.update(T);
     }
   }
 
-  function shakePrompt(){
-    el.promptText.classList.remove("shake");
-    void el.promptText.offsetWidth;
-    el.promptText.classList.add("shake");
-  }
-
-  // ---------- UI ----------
-  function updateHeaderUI(){
-    el.petName.textContent = state.name;
-    el.petStage.textContent = stageName(state.stage);
-    el.petMood.textContent = moodName(state.mood);
-    el.petLv.textContent = state.lv;
-    el.energyBar.style.width = `${Math.round(state.energy*100)}%`;
-
-    el.wpmNow.textContent = state.wpmNow == null ? "-" : String(state.wpmNow);
-    el.accNow.textContent = state.accNow == null ? "-" : String(Math.round(state.accNow*100));
-    el.comboNow.textContent = String(state.combo || 0);
-
-    state.trait = traitFrom(state);
-    el.traitNow.textContent = state.trait;
-
-    el.statusPill.textContent = session.idle ? "idle" : "awake";
-  }
-
-  function setPrompt(index=null){
-    const idx = (index == null) ? nextPromptIndex(state) : index;
-    state.promptIndex = idx;
-    session.target = promptByIndex(idx);
-
-    renderPromptChars(session.target);
-
-    el.typeInput.value = "";
-    session.typed = "";
-    session.startedAt = null;
-    session.lastKeyAt = null;
-    session.idle = true;
-
-    updateHeaderUI();
-    saveState();
-  }
-
-  // ---------- Typing metrics ----------
-  function computeAccuracy(typed, target){
-    const n = Math.max(typed.length, target.length);
-    if(n === 0) return 1;
-    let same = 0;
-    for(let i=0;i<n;i++){
-      if(typed[i] === target[i]) same++;
+  class Renderer {
+    constructor(state, projectiles){
+      this.s = state;
+      this.pj = projectiles;
     }
-    return same / n;
-  }
-  function computeWPM(typed, durationMs){
-    if(!durationMs || durationMs <= 0) return 0;
-    const minutes = durationMs / 60000;
-    return (typed.length / 5) / minutes;
-  }
-  function levelNeed(lv){
-    return Math.round(24 + lv*10 + Math.pow(lv,1.25)*5);
-  }
+    render(fm){
+      const s = this.s;
+      const W = s.w, H = s.h;
 
-  function rewardFrom(wpm, acc){
-    const w = clamp(wpm / 90, 0, 1);
-    const a = clamp((acc - 0.6) / 0.4, 0, 1);
-    const quality = 0.55*w + 0.45*a;
+      ctx.fillStyle="#000";
+      ctx.fillRect(0,0,W,H);
 
-    const baseXp = 6 + Math.round(quality * 18);
-    const combo = state.combo || 0;
-    const comboBonus = Math.round(clamp(combo,0,15) * 0.9);
-    const xpGain = baseXp + comboBonus;
+      ctx.fillStyle="#fff";
+      for(const st of s.stars) ctx.fillRect(st.x,st.y,2,2);
 
-    const energyCost = 0.04 + (1-a)*0.07 + w*0.02;
-    const energyDelta = -energyCost;
+      const sc = s.colors.shield();
+      for(const sh of s.shields){
+        ctx.fillStyle = sc;
+        for(let r=0;r<sh.h;r++){
+          for(let c=0;c<sh.w;c++){
+            if(sh.bits[r][c]) ctx.fillRect(sh.x + c*s.U, sh.y + r*s.U, s.U, s.U);
+          }
+        }
+      }
 
-    const moodDelta = (w*0.10) - (a*0.08);
-    const glowDelta = (quality*0.08) - (Math.abs(w-a)*0.03);
-    const spikeDelta = (1-a)*0.12 - a*0.02;
-    const wobbleDelta = (w*0.05) + (Math.abs(0.5-(w*0.5+a*0.5))*0.03);
-    const friendlyDelta = (a*0.07) - (w*0.03) - ((1-a)*0.03);
+      const enemyScale = Math.max(1, Math.round(s.enemyW/ENEMY_SPR_W));
+      for(let r=0;r<s.rows;r++){
+        for(let c=0;c<s.cols;c++){
+          if(s.hpGrid[r][c] <= 0) continue;
+          const typeIndex = (s.rowTypeMap && s.rowTypeMap[r] != null) ? s.rowTypeMap[r] : (r % ENEMY_TYPES.length);
+          const type = ENEMY_TYPES[typeIndex % ENEMY_TYPES.length];
+          const bmp = s.enemyFrame ? type.b : type.a;
+          const color = s.colors.row[r % s.colors.row.length];
+          const x = s.fx + c*fm.stepX;
+          const y = s.fy + r*fm.stepY;
+          drawBitmap(bmp, x, y, enemyScale, color);
 
-    let kind = "info";
-    let msg = "";
-    if(acc >= 0.95 && wpm >= 50){
-      kind = "good"; msg = "きれいに打てた！ 生物が嬉しそうに光った。";
-    }else if(acc < 0.75){
-      kind = "bad"; msg = "ミスが多い…生物がトゲトゲしてきた。";
-    }else if(wpm < 25){
-      kind = "info"; msg = "ゆっくりでもOK。生物は落ち着いて観察している。";
-    }else{
-      kind = "good"; msg = "いい調子。少し成長した。";
-    }
-    return {xpGain, energyDelta, moodDelta, glowDelta, spikeDelta, wobbleDelta, friendlyDelta, msg, kind};
-  }
+          if(s.hpGrid[r][c] >= 2){
+            ctx.fillStyle="rgba(255,255,255,.65)";
+            ctx.fillRect(x, y-3, Math.max(10, s.enemyW*0.30), 2);
+          }
+        }
+      }
 
-  function applyReward(wpm, acc){
-    const r = rewardFrom(wpm, acc);
-    const pass = (acc >= 0.86);
-    if(pass) state.combo = (state.combo||0) + 1;
-    else state.combo = 0;
+      drawBitmap(SHIP, s.px - s.shipW/2, s.playerTopY(), s.U, s.colors.player());
 
-    state.xp += r.xpGain;
-    state.energy = clamp(state.energy + r.energyDelta, 0, 1);
-    state.mood = clamp(state.mood + r.moodDelta, 0, 1);
-    state.glow = clamp(state.glow + r.glowDelta, 0, 1);
-    state.spikes = clamp(state.spikes + r.spikeDelta, 0, 1);
-    state.wobble = clamp(state.wobble + r.wobbleDelta, 0, 1);
-    state.friendliness = clamp(state.friendliness + r.friendlyDelta, 0, 1);
+      ctx.fillStyle="cyan";
+      for(const b of this.pj.playerBullets.active) ctx.fillRect(b.x,b.y,s.BW,s.BH);
 
-    state.wpmNow = Math.round(wpm);
-    state.accNow = acc;
-    state.trait = traitFrom(state);
+      ctx.fillStyle="orange";
+      for(const b of this.pj.enemyBullets.active) ctx.fillRect(b.x,b.y,s.BW,s.BH);
 
-    pushLog(r.kind, `${r.msg} (+XP ${r.xpGain}, Acc ${Math.round(acc*100)}%, WPM ${Math.round(wpm)})`);
+      ctx.fillStyle="orange";
+      for(const p of this.pj.booms.active) ctx.fillRect(p.x,p.y,4,4);
 
-    while(state.xp >= levelNeed(state.lv)){
-      state.xp -= levelNeed(state.lv);
-      state.lv++;
-      pushLog("good", `レベルアップ！ Lv ${state.lv} になった。`);
-      state.energy = clamp(state.energy + 0.12, 0, 1);
-
-      const newStage = Math.min(4, Math.floor((state.lv-1)/4));
-      if(newStage !== state.stage){
-        state.stage = newStage;
-        pushLog("good", `進化！ 姿が「${stageName(state.stage)}」になった。`);
+      if(s.paused){
+        ctx.fillStyle="rgba(0,0,0,.25)";
+        ctx.fillRect(0,0,W,H);
       }
     }
-
-    if(state.energy <= 0.02){
-      pushLog("bad", "疲れ切った…少し休ませてあげよう（放置で回復）。");
-    }
-
-    saveState();
   }
 
-  // ---------- IME composition events ----------
-  el.typeInput.addEventListener("compositionstart", () => {
-    composing = true;
-    toast("IME変換中… 英数入力に切り替えてください");
-  });
-  el.typeInput.addEventListener("compositionend", () => {
-    composing = false;
-    session.typed = el.typeInput.value;
-    updatePromptHighlight(session.typed);
-  });
+  state = new GameState();
+  const enemies = new EnemySystem(state);
+  const shields = new ShieldSystem(state);
 
-  // ---------- Input ----------
-  function startSessionIfNeeded(){
-    if(session.startedAt == null){
-      session.startedAt = now();
-      session.idle = false;
-      updateHeaderUI();
+  let projectiles, collisions, logic, renderer;
+
+  const Input = {
+    stick: { baseCx:0, baseCy:0, radius:52, dx:0, knobW:74, knobH:74 },
+    stickTouchActive:false,
+    stickPointerId:null,
+    stickGeomDirty:true,
+
+    applyMobileControlSizes(){
+      if(!state.isMobile) return;
+      const sw = (typeof screen!=="undefined" && screen.width) ? screen.width : state.w;
+      const sh = (typeof screen!=="undefined" && screen.height) ? screen.height : state.h;
+      const m = Math.min(sw, sh);
+      const clampInt = (v,a,b)=>Math.max(a, Math.min(b, v|0));
+
+      const margin = clampInt(Math.round(m*0.035), 16, 28);
+      const base = clampInt(Math.round(m*0.22), 110, 170);
+      const knob = clampInt(Math.round(base*0.52), 60, 92);
+      const shoot = clampInt(Math.round(m*0.20), 100, 150);
+
+      stickBase.style.width = stickBase.style.height = base + "px";
+      stickKnob.style.width = stickKnob.style.height = knob + "px";
+      shootBtn.style.width = shootBtn.style.height = shoot + "px";
+
+      stickBase.style.left = margin + "px";
+      stickBase.style.bottom = margin + "px";
+      stickKnob.style.left = margin + "px";
+      stickKnob.style.bottom = margin + "px";
+
+      shootBtn.style.right = margin + "px";
+      shootBtn.style.bottom = (margin + 6) + "px";
+
+      // label position
+      shootLabel.style.right = margin + "px";
+      shootLabel.style.bottom = (margin + shoot + 18) + "px";
+
+      this.stickGeomDirty = true;
+    },
+
+    updateStickGeometry(){
+      if(!this.stickGeomDirty) return;
+      const br = stickBase.getBoundingClientRect();
+      const kr = stickKnob.getBoundingClientRect();
+      this.stick.baseCx = br.left + br.width/2;
+      this.stick.baseCy = br.top  + br.height/2;
+      this.stick.knobW = kr.width || 74;
+      this.stick.knobH = kr.height || 74;
+      // knob center can move inside base
+      const radius = (br.width/2) - (this.stick.knobW/2);
+      this.stick.radius = Math.max(18, radius);
+      this.stickGeomDirty = false;
+    },
+
+    setKnobPos(x,y){
+      const w = this.stick.knobW || 74;
+      const h = this.stick.knobH || 74;
+      stickKnob.style.left = (x - w/2) + "px";
+      stickKnob.style.top  = (y - h/2) + "px";
+    },
+
+    applyStick(){
+      const dead = 0.18;
+      if(Math.abs(this.stick.dx) < dead){
+        state.holdL = false; state.holdR = false;
+        return;
+      }
+      if(this.stick.dx < 0){
+        state.holdL = true; state.holdR = false;
+      }else{
+        state.holdR = true; state.holdL = false;
+      }
+    },
+
+    stickReset(){
+      this.stickTouchActive = false;
+      this.stickPointerId = null;
+      this.stick.dx = 0;
+      state.holdL = false;
+      state.holdR = false;
+
+      // NOTE: Do not resize mobile controls here.
+      // Resizing is handled only on viewport changes (resize / breakpoint change),
+      // so the joystick + shot button don't "snap" size after first interaction.
+      this.updateStickGeometry(); // reads rect only when dirty
+      this.setKnobPos(this.stick.baseCx, this.stick.baseCy);
+    },
+
+    stickMoveTouch(t){
+      const vx = t.clientX - this.stick.baseCx;
+      const max = this.stick.radius;
+      const cl = Math.min(Math.abs(vx), max);
+      const dx = vx < 0 ? -cl : cl;
+
+      this.setKnobPos(this.stick.baseCx + dx, this.stick.baseCy);
+      this.stick.dx = clamp(vx / max, -1, 1);
+      this.applyStick();
+    },
+
+    updateControlsVisibility(){
+      controls.style.display = state.isMobile ? "block" : "none";
+      this.applyMobileControlSizes();
+      this.stickGeomDirty = true;
+      this.updateStickGeometry();
+      this.setKnobPos(this.stick.baseCx, this.stick.baseCy);
     }
+  };
+
+  function rebuildSystems(){
+    projectiles = new ProjectileSystem(state, enemies, shields);
+    collisions  = new CollisionSystem(state, enemies, shields, projectiles);
+    logic       = new GameLogic(state, enemies, shields, projectiles, collisions);
+    renderer    = new Renderer(state, projectiles);
   }
 
-  el.typeInput.addEventListener("keydown", (e) => {
-    // iOS対策：最初の操作でAudioContextを解放
-    TypeSound.unlock();
 
-    if(e.key === "Enter"){
-      e.preventDefault();
-      submit();
+// ===== Visibility / focus stabilization =====
+// Prevent stuck inputs when tab loses focus, and auto-pause when hidden.
+const clearInputs = () => {
+  if(!state) return;
+  state.holdL = false; state.holdR = false;
+  try{ Input && Input.stickReset && Input.stickReset(); }catch(_){}
+};
+
+const autoPauseIfNeeded = () => {
+  try{
+    if(!state || !logic) return;
+    if(state.over) return;
+    if(!state.paused) logic.setPaused(true);
+  }catch(_){}
+};
+
+window.addEventListener("blur", () => { clearInputs(); autoPauseIfNeeded(); }, {passive:true});
+document.addEventListener("visibilitychange", () => {
+  if(document.hidden){ clearInputs(); autoPauseIfNeeded(); }
+}, {passive:true});
+
+  pauseBtn.addEventListener("click", (e)=>{
+    e.preventDefault();
+    logic.togglePause();
+  }, {passive:false});
+
+  addEventListener("keydown",(e)=>{
+    if(e.key==="p"||e.key==="P"||e.key==="Escape"){
+      logic.togglePause();
       return;
     }
-    if(e.key === "Escape"){
-      e.preventDefault();
-      el.typeInput.value = "";
-      session.typed = "";
-      updatePromptHighlight("");
-      toast("リセット");
+    if(state.paused) return;
+
+    if(state.over){
+      logic.reset();
       return;
     }
 
-    startSessionIfNeeded();
-    session.lastKeyAt = now();
+    if(e.code==="ArrowLeft") state.holdL=true;
+    if(e.code==="ArrowRight") state.holdR=true;
 
-    // IME中は音を鳴らす判定を作らない
-    if(e.isComposing || composing) return;
-
-    if(e.key === "Backspace") lastKeyKind = "backspace";
-    else if(e.key === " ") lastKeyKind = "space";
-    else if(e.key.length === 1) lastKeyKind = "char";
-    else lastKeyKind = "other";
+    // キーボード側もクールダウンで制限されます（shootPlayerOnce 内）
+    if(e.code==="Space" && !e.repeat){
+      // Space can scroll the page in some browsers; prevent that.
+      e.preventDefault();
+      projectiles.shootPlayerOnce();
+    }
   });
 
-  el.typeInput.addEventListener("input", (e) => {
-    startSessionIfNeeded();
-    session.lastKeyAt = now();
-
-    session.typed = el.typeInput.value;
-
-    // IME変換中は更新・音を抑制
-    if(e.isComposing || composing) return;
-
-    updatePromptHighlight(session.typed);
-
-    const target = session.target || "";
-    if(session.typed.length > target.length) shakePrompt();
-
-    // typewriter sound
-    const inputType = e.inputType || "";
-    if(inputType.startsWith("delete")) TypeSound.type("backspace");
-    else if(lastKeyKind === "space") TypeSound.type("space");
-    else if(lastKeyKind === "char") TypeSound.type("char");
+  addEventListener("keyup",(e)=>{
+    if(state.paused) return;
+    if(e.code==="ArrowLeft") state.holdL=false;
+    if(e.code==="ArrowRight") state.holdR=false;
   });
 
-  // “保険”のアンロック（タップ/キーで一度だけ）
-  window.addEventListener("pointerdown", () => TypeSound.unlock(), { once:true, passive:true });
-  window.addEventListener("touchstart", () => TypeSound.unlock(), { once:true, passive:true });
-  window.addEventListener("keydown", () => TypeSound.unlock(), { once:true });
+  // Restart: GAME OVER中はどこを押しても再開（モバイル/PC共通）
+  const restartAny = (e) => {
+    if(!state.over || state.paused) return;
+    logic.reset();
+    if(e && e.preventDefault) e.preventDefault();
+    if(e && e.stopPropagation) e.stopPropagation();
+  };
 
-  function submit(){
-    const typed = (el.typeInput.value || "");
-    const target = (session.target || "");
-    if(!target){ setPrompt(null); return; }
-    if(typed.length === 0){ toast("入力して Enter"); return; }
-
-    const endAt = now();
-    const startAt = session.startedAt ?? (endAt - 1200);
-    const durationMs = Math.max(200, endAt - startAt);
-    const acc = computeAccuracy(typed, target);
-    const wpm = computeWPM(typed, durationMs);
-
-    applyReward(wpm, acc);
-
-    const verdict = (acc >= 0.86) ? "OK" : "MISS";
-    toast(`${verdict}  Acc ${Math.round(acc*100)}%  WPM ${Math.round(wpm)}`);
-
-    setPrompt(null);
-
-    if(state.energy < 0.18) pushLog("bad", "ちょっと疲れてる…休憩しながら育てよう。");
-    else if(state.combo >= 5) pushLog("good", `コンボ ${state.combo}！ どんどん学習している。`);
+  if("PointerEvent" in window){
+    document.addEventListener("pointerdown", restartAny, {passive:false});
+  }else{
+    document.addEventListener("mousedown", restartAny, {passive:false});
+    document.addEventListener("touchstart", restartAny, {passive:false});
   }
 
-  // ---------- Buttons ----------
-  el.btnNewPrompt.addEventListener("click", () => {
-    setPrompt(null);
-    pushLog("info", "お題を変えた。新しい旅の予定だ。");
-    TypeSound.unlock();
+  // Shoot (mobile button)
+  const shootOnce = (e) => {
+    if(state.paused) return;
+    if(state.over){ logic.reset(); e.preventDefault(); e.stopPropagation(); return; }
+    if(!state.isMobile) return;
+
+    shootBtn.blur();
+    if(document.activeElement) document.activeElement.blur();
+
+    projectiles.shootPlayerOnce(); // クールダウンで制限
+
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  // Stick controls: prefer Pointer Events, fallback to Touch Events
+  if("PointerEvent" in window){
+    const onStickPointerDown = (e) => {
+      if(!state.isMobile || state.paused || state.over) return;
+      if(e.button != null && e.button !== 0) return;
+
+      Input.stickTouchActive = true;
+      Input.stickPointerId = e.pointerId;
+
+      Input.updateStickGeometry(); // dirty の時だけ rect を取得
+      try{ e.target.setPointerCapture(e.pointerId); }catch(_){}
+      Input.stickMoveTouch(e);
+
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    stickBase.addEventListener("pointerdown", onStickPointerDown, {passive:false});
+    stickKnob.addEventListener("pointerdown", onStickPointerDown, {passive:false});
+
+    window.addEventListener("pointermove", (e)=>{
+      if(!Input.stickTouchActive || state.paused) return;
+      if(Input.stickPointerId != null && e.pointerId !== Input.stickPointerId) return;
+      Input.stickMoveTouch(e);
+      e.preventDefault();
+      e.stopPropagation();
+    }, {passive:false});
+
+    const endStickPointer = (e) => {
+      if(!Input.stickTouchActive) return;
+      if(Input.stickPointerId != null && e.pointerId !== Input.stickPointerId) return;
+      try{ stickBase.releasePointerCapture && stickBase.releasePointerCapture(e.pointerId); }catch(_){ }
+      try{ stickKnob.releasePointerCapture && stickKnob.releasePointerCapture(e.pointerId); }catch(_){ }
+      Input.stickReset();
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    window.addEventListener("pointerup", endStickPointer, {passive:false});
+    window.addEventListener("pointercancel", endStickPointer, {passive:false});
+
+    shootBtn.addEventListener("pointerdown", shootOnce, {passive:false});
+    shootBtn.addEventListener("pointerup", (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
+    shootBtn.addEventListener("pointercancel", (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
+
+  }else{
+    // Touch fallback
+    ["touchstart","touchmove","touchend"].forEach(t=>{
+      document.addEventListener(t, e=>{
+        if(e.target && e.target.id === "shootBtn") e.preventDefault();
+      }, {passive:false});
+    });
+
+    const onStickStart = (e) => {
+      if(!state.isMobile || state.paused || state.over) return;
+      Input.stickTouchActive = true;
+      Input.updateStickGeometry();
+      if(e.touches && e.touches[0]) Input.stickMoveTouch(e.touches[0]);
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    stickBase.addEventListener("touchstart", onStickStart, {passive:false});
+    stickKnob.addEventListener("touchstart", onStickStart, {passive:false});
+
+    window.addEventListener("touchmove",(e)=>{
+      if(!Input.stickTouchActive || state.paused) return;
+      if(e.touches && e.touches[0]) Input.stickMoveTouch(e.touches[0]);
+      e.preventDefault();
+      e.stopPropagation();
+    }, {passive:false});
+
+    const endStickTouch = (e) => {
+      if(!Input.stickTouchActive) return;
+      Input.stickReset();
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    window.addEventListener("touchend", endStickTouch, {passive:false});
+    window.addEventListener("touchcancel", endStickTouch, {passive:false});
+
+    shootBtn.addEventListener("touchstart", shootOnce, {passive:false});
+    shootBtn.addEventListener("touchend", (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
+    shootBtn.addEventListener("touchcancel", (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
+  }
+  let resizeQueued=false;
+  addEventListener("resize",()=>{
+    if(resizeQueued) return;
+    resizeQueued=true;
+    requestAnimationFrame(()=>{
+      resizeQueued=false;
+
+      resizeCanvas();
+
+      const oldIsMobile = state.isMobile;
+      state.U = calcU();
+      state.isMobile = isCoarse();
+      const bpChanged = (oldIsMobile !== state.isMobile);
+
+      state.recalcSizes();
+      state.resetStars();
+      state.clampPlayer();
+      Input.updateControlsVisibility();
+
+      if(bpChanged){
+        logic.reset();
+        return;
+      }
+
+      shields.relayoutShields();
+
+      const fm = state.getFM();
+      sanitizeState(fm);
+      // Keep formation on-screen after resize (avoid NaN / too-low spawn)
+      state.fx = safeNum((state.w - fm.totalW)/2, 0);
+
+      const formationH = (state.rows-1) * fm.stepY + state.enemyH;
+      const maxFy = Math.max(0, state.playerTopY() - formationH - 6);
+      const baseFy = safeNum(fm.baseY, 0);
+      state.fy = clamp(baseFy, 0, maxFy);
+
+      // Always clear held inputs after resize/orientation change
+      Input.stickReset();
+    });
   });
 
-  el.btnSubmit.addEventListener("click", () => {
-    TypeSound.unlock();
-    submit();
-  });
+  function loop(){
+    const now = performance.now();
+    const dtMs = Math.min(34, now - (loop._last || now));
+    loop._last = now;
 
-  el.btnSnapshot.addEventListener("click", () => {
-    const a = document.createElement("a");
-    a.download = `${state.name}_lv${state.lv}.png`;
-    a.href = cv.toDataURL("image/png");
-    a.click();
-    toast("PNG保存");
-    pushLog("info", "観察記録（PNG）を保存した。");
-    TypeSound.unlock();
-  });
+    const dtSec = dtMs / 1000;
+    const T = { ms: dtMs, sec: dtSec, f: dtSec * 60 };
 
-  el.btnShare.addEventListener("click", async () => {
-    const text = makeShareText();
-    try{
-      await navigator.clipboard.writeText(text);
-      toast("コピーしました");
-    }catch(e){
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      toast("コピーしました");
+        try{
+      const fm = state.getFM();
+      
+          logic.update(T, fm);
+          collisions.detect(fm);
+          renderer.render(fm);
+    }catch(err){
+      console.error(err);
+      // Fail-safe: show error and allow tap-to-restart
+      state.over = true;
+      state.paused = false;
+      msgEl.innerHTML = 'ERROR<br><span id="restartHint">TAP / CLICK / ENTER</span>';
+      msgEl.style.pointerEvents = "none";
+      requestRecover("loop.catch");
     }
-    pushLog("info", "シェア文をコピーした。");
-    TypeSound.unlock();
-  });
 
-  el.btnReset.addEventListener("click", () => {
-    if(!confirm("本当に初期化しますか？（この端末の育成データが消えます）")) return;
-    localStorage.removeItem(STORAGE_KEY);
-    state = defaultState();
-    stars = null;
-    setPrompt(null);
-    renderLog();
-    updateHeaderUI();
-    pushLog("info", "新しい個体が誕生した。");
-    toast("初期化しました");
-    TypeSound.unlock();
-  });
-
-  function makeShareText(){
-    const acc = state.accNow==null ? "-" : `${Math.round(state.accNow*100)}%`;
-    const wpm = state.wpmNow==null ? "-" : `${state.wpmNow}`;
-    return [
-      `Typing Pet (travel booking)`,
-      `Name: ${state.name}`,
-      `Lv: ${state.lv} / Stage: ${stageName(state.stage)} / Trait: ${state.trait}`,
-      `Energy: ${Math.round(state.energy*100)}% / Mood: ${moodName(state.mood)}`,
-      `Last: Acc ${acc}, WPM ${wpm}`,
-      `#TypingPet`
-    ].join("\n");
+    requestAnimationFrame(loop);
   }
+  // prevent long-press selection / context menu on mobile
+  document.addEventListener('contextmenu', (e)=>{ e.preventDefault(); }, {passive:false});
+  document.addEventListener('selectstart', (e)=>{ e.preventDefault(); }, {passive:false});
+  document.addEventListener('dragstart', (e)=>{ e.preventDefault(); }, {passive:false});
+  window.addEventListener('gesturestart', (e)=>{ e.preventDefault(); }, {passive:false});
 
-  // idle detection / passive recovery
-  setInterval(() => {
-    const idleFor = session.lastKeyAt ? (now() - session.lastKeyAt) : 999999;
-    const wasIdle = session.idle;
-    session.idle = idleFor > 7000;
-    if(session.idle && !wasIdle){
-      pushLog("info", "生物は休憩モードに入った。");
-    }
-    if(session.idle){
-      const rec = 0.006;
-      state.energy = clamp(state.energy + rec, 0, 1);
-      state.mood = clamp(state.mood - 0.004, 0, 1);
-      state.glow = clamp(state.glow + 0.002, 0, 1);
-      saveState();
-      updateHeaderUI();
-    }else{
-      updateHeaderUI();
-    }
-  }, 1200);
+  // boot
+  resizeCanvas();
+  // initialize sizing + mobile controls before first interaction (prevents "first touch" snap)
+  state.U = calcU();
+  state.isMobile = isCoarse();
+  state.recalcSizes();
+  state.resetStars();
+  state.clampPlayer();
+  Input.updateControlsVisibility();
 
-  // ---------- Drawing (Canvas) ----------
-  let t0 = now();
-  let stars = null;
+  rebuildSystems();
+  logic.reset();
+  loop();
 
-  function resizeCanvasToDisplaySize(){
-    const rect = cv.getBoundingClientRect();
-    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-    const w = Math.round(rect.width * dpr);
-    const h = Math.round(rect.height * dpr);
-    if(cv.width !== w || cv.height !== h){
-      cv.width = w; cv.height = h;
-      stars = null;
-    }
-  }
-
-  function initStars(W,H){
-    const count = Math.floor((W*H)/18000);
-    stars = [];
-    const seed = (state.seed||123456) ^ hash32(state.name);
-    let x = seed;
-    const rnd = () => (x = (x*1664525 + 1013904223)>>>0) / 4294967296;
-    for(let i=0;i<count;i++){
-      stars.push({ x:rnd()*W, y:rnd()*H*0.9, r:0.6+rnd()*1.8, a:0.25+rnd()*0.55, s:0.15+rnd()*0.55 });
-    }
-  }
-
-  function drawStars(W,H,t){
-    if(!stars) initStars(W,H);
-    ctx.save();
-    for(const st of stars){
-      const tw = 0.5 + 0.5*Math.sin(t*st.s + st.x*0.01);
-      ctx.globalAlpha = st.a * (0.55 + tw*0.45);
-      ctx.fillStyle = "rgba(255,255,255,0.95)";
-      ctx.beginPath();
-      ctx.arc(st.x, st.y, st.r*(0.85+tw*0.35), 0, Math.PI*2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  function drawEye(x, y, s, blink, jitter){
-    ctx.save();
-    ctx.translate(x + (Math.sin((now()-t0)/1000*7 + x)*jitter), y);
-    ctx.globalAlpha = 0.92;
-    ctx.fillStyle = "rgba(245,250,255,0.95)";
-    ctx.beginPath();
-    ctx.ellipse(0,0, s*1.05, s*0.95*blink, 0, 0, Math.PI*2);
-    ctx.fill();
-    const mood = state.mood;
-    const px = Math.sin((now()-t0)/1000*1.4 + x)* (2 + mood*3);
-    const py = Math.cos((now()-t0)/1000*1.2 + x)* (1 + mood*2);
-    ctx.fillStyle = "rgba(10,16,30,0.9)";
-    ctx.beginPath();
-    ctx.ellipse(px, py, s*0.35, s*0.35*blink, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle = `rgba(123,240,255,${0.7*state.glow+0.15})`;
-    ctx.beginPath();
-    ctx.ellipse(-s*0.22, -s*0.22, s*0.16, s*0.16*blink, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  function drawFeelers(R, t, mood, energy){
-    ctx.save();
-    ctx.globalAlpha = 0.55 + state.glow*0.35;
-    ctx.strokeStyle = `rgba(181,255,123,${0.25 + state.glow*0.25})`;
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    const n = 2 + Math.floor(mood*2);
-    for(let i=0;i<n;i++){
-      const ang = (-Math.PI/2) + (i-(n-1)/2)*0.45;
-      const len = R*(0.75 + energy*0.25);
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(ang)*R*0.55, Math.sin(ang)*R*0.55);
-      const cx = Math.cos(ang)*len*0.55 + Math.sin(t*2 + i)*R*0.15;
-      const cy = Math.sin(ang)*len*0.55 - Math.cos(t*2 + i)*R*0.10;
-      const ex = Math.cos(ang)*len + Math.sin(t*3 + i)*R*0.12;
-      const ey = Math.sin(ang)*len - Math.cos(t*2.5 + i)*R*0.12;
-      ctx.quadraticCurveTo(cx,cy,ex,ey);
-      ctx.stroke();
-      ctx.fillStyle = `rgba(123,240,255,${0.22+state.glow*0.28})`;
-      ctx.beginPath();
-      ctx.arc(ex,ey, 5+state.glow*4, 0, Math.PI*2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  function drawLegs(R, t, mood, energy){
-    ctx.save();
-    ctx.globalAlpha = 0.40 + state.glow*0.25;
-    ctx.strokeStyle = `rgba(255,255,255,${0.18 + state.glow*0.20})`;
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    const legs = 4 + Math.floor(mood*6);
-    for(let i=0;i<legs;i++){
-      const side = (i%2===0)? -1 : 1;
-      const row = Math.floor(i/2);
-      const y = lerp(-R*0.05, R*0.40, row / Math.max(1,(legs/2)-1));
-      const x = side * lerp(R*0.55, R*0.85, row / Math.max(1,(legs/2)-1));
-      const kick = Math.sin(t* (3.5 + mood*2) + i)* (8 + energy*8);
-      ctx.beginPath();
-      ctx.moveTo(x*0.65, y);
-      ctx.quadraticCurveTo(x*1.02 + kick*0.35*side, y+R*0.25, x*1.10 + kick*0.55*side, y+R*0.40);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  function drawBubbles(R, t, glow){
-    ctx.save();
-    ctx.globalAlpha = 0.20 + glow*0.30;
-    for(let i=0;i<8;i++){
-      const ang = (i/8)*Math.PI*2 + t*0.25;
-      const rr = R*(0.65 + Math.sin(t*0.9+i)*0.06);
-      const x = Math.cos(ang)*rr*0.7;
-      const y = Math.sin(ang)*rr*0.5 - R*0.15;
-      ctx.fillStyle = `rgba(123,240,255,${0.10 + glow*0.22})`;
-      ctx.beginPath();
-      ctx.arc(x,y, 6 + Math.sin(t*2+i)*2, 0, Math.PI*2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  function drawSparkles(R, t, glow){
-    ctx.save();
-    ctx.globalAlpha = 0.25 + glow*0.45;
-    for(let i=0;i<14;i++){
-      const ang = (i/14)*Math.PI*2 + t*0.35;
-      const r = R*(1.05 + Math.sin(t*0.8+i)*0.08);
-      const x = Math.cos(ang)*r*0.85;
-      const y = Math.sin(ang)*r*0.55 - R*0.05;
-      const s = 1.5 + glow*2.2 + Math.max(0, Math.sin(t*3 + i))*1.8;
-      ctx.strokeStyle = `rgba(181,255,123,${0.12 + glow*0.18})`;
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.moveTo(x-s,y);
-      ctx.lineTo(x+s,y);
-      ctx.moveTo(x,y-s);
-      ctx.lineTo(x,y+s);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  function draw(){
-    const t = (now() - t0)/1000;
-    resizeCanvasToDisplaySize();
-    const W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-
-    drawStars(W,H,t);
-
-    const floorY = H*0.76;
-    const glow = state.glow;
-    ctx.save();
-    ctx.globalAlpha = 0.35 + glow*0.35;
-    const grd = ctx.createRadialGradient(W*0.5, floorY, 10, W*0.5, floorY, W*0.55);
-    grd.addColorStop(0, `rgba(123,240,255,${0.32+glow*0.25})`);
-    grd.addColorStop(0.5, `rgba(181,255,123,${0.10+glow*0.18})`);
-    grd.addColorStop(1, `rgba(0,0,0,0)`);
-    ctx.fillStyle = grd;
-    ctx.beginPath();
-    ctx.ellipse(W*0.5, floorY, W*0.33, H*0.11, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-
-    const stage = state.stage;
-    const mood = state.mood;
-    const energy = state.energy;
-    const wobble = state.wobble;
-
-    const sizeBase = lerp(58, 120, clamp((state.lv-1)/18, 0, 1));
-    const sizeStage = [0.80, 0.95, 1.05, 1.12, 1.18][stage];
-    const R = sizeBase * sizeStage;
-
-    const centerX = W*0.5;
-    const centerY = H*0.54;
-
-    const awake = !session.idle;
-    const bob = (Math.sin(t* (awake? 3.4: 1.2)) * (8 + wobble*10)) * (0.35 + energy*0.65);
-    const sway = Math.sin(t* (awake? 2.2: 0.9)) * (10 + wobble*14) * (0.25 + energy*0.75);
-
-    const hue1 = 185 + glow*35 + mood*18;
-    const hue2 = 105 + glow*20 - mood*10;
-    const alpha = 0.82;
-
-    ctx.save();
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.beginPath();
-    ctx.ellipse(centerX + sway*0.18, floorY+10, R*1.05, R*0.28, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-
-    ctx.save();
-    ctx.translate(centerX + sway, centerY + bob);
-
-    const deform = (0.10 + wobble*0.18) * (awake? 1.0 : 0.6);
-    const pulse = 1 + Math.sin(t* (awake? 5.0: 2.0)) * deform * (0.35 + energy*0.65);
-    ctx.scale(pulse, 1/pulse);
-
-    const bodyPath = new Path2D();
-    const lobes = 6 + stage*2;
-    const sp = state.spikes;
-    for(let i=0;i<=360;i+=4){
-      const rad = (i*Math.PI/180);
-      const wave = Math.sin(rad*lobes + t*(awake? 2.2: 0.9)) * (0.06 + wobble*0.10);
-      const spike = Math.max(0, Math.sin(rad*(lobes*0.5) + t*1.3)) * sp * 0.14;
-      const r = R * (1 + wave + spike);
-      const x = Math.cos(rad)*r;
-      const y = Math.sin(rad)*r*0.92;
-      if(i===0) bodyPath.moveTo(x,y);
-      else bodyPath.lineTo(x,y);
-    }
-    bodyPath.closePath();
-
-    const g = ctx.createRadialGradient(0,-R*0.35, 10, 0,0, R*1.4);
-    g.addColorStop(0, `hsla(${hue1}, 90%, 70%, ${alpha})`);
-    g.addColorStop(0.55, `hsla(${lerp(hue1,hue2,0.55)}, 85%, 56%, ${alpha})`);
-    g.addColorStop(1, `hsla(${hue2}, 80%, 22%, ${0.95})`);
-    ctx.fillStyle = g;
-    ctx.fill(bodyPath);
-
-    ctx.save();
-    ctx.globalAlpha = 0.35 + glow*0.45;
-    ctx.strokeStyle = `rgba(123,240,255,${0.25+glow*0.25})`;
-    ctx.lineWidth = 2.2;
-    ctx.stroke(bodyPath);
-    ctx.restore();
-
-    const eyeY = -R*0.15 + bob*0.08;
-    const eyeSpread = lerp(R*0.28, R*0.42, stage/4);
-    const eyeSize = lerp(7, 14, clamp((state.lv-1)/18,0,1)) * (0.85 + energy*0.4);
-    const blink = (Math.sin(t* (awake? 6.0: 2.2)) > 0.92) ? 0.15 : 1.0;
-    const jitter = (awake? 1: 0) * (mood*2.0);
-    drawEye(-eyeSpread, eyeY, eyeSize, blink, jitter);
-    drawEye(+eyeSpread, eyeY, eyeSize, blink, jitter);
-
-    ctx.save();
-    ctx.globalAlpha = 0.85;
-    ctx.strokeStyle = `rgba(0,0,0,0.45)`;
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    const smile = lerp(-0.25, 0.35, state.friendliness);
-    ctx.beginPath();
-    ctx.arc(0, R*0.14, R*0.22, Math.PI*(0.20+smile*0.15), Math.PI*(0.80-smile*0.15), false);
-    ctx.stroke();
-    ctx.restore();
-
-    if(stage >= 3) drawLegs(R, t, mood, energy);
-    else if(stage >= 2) drawFeelers(R, t, mood, energy);
-    else if(stage >= 1) drawBubbles(R, t, glow);
-
-    drawSparkles(R, t, glow);
-    ctx.restore();
-
-    requestAnimationFrame(draw);
-  }
-
-  // ---------- Boot ----------
-  function boot(){
-    renderLog();
-    updateHeaderUI();
-    setPrompt(null);
-    requestAnimationFrame(draw);
-    setTimeout(() => el.typeInput.focus(), 120);
-    saveState();
-  }
-
-  // Start
-  boot();
 })();
 </script>
 </body>
